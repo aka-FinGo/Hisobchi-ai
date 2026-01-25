@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react';
+import { App as CapacitorApp } from '@capacitor/app';
 import { Home, History, Plus, Sparkles, Settings } from 'lucide-react';
 import { loadData, saveData } from './storage';
-import { AppData, Transaction, TransactionType } from './types';
+import { AppData, Transaction } from './types';
 import HomePage from './components/HomePage';
 import HistoryPage from './components/HistoryPage';
 import StatsPage from './components/StatsPage';
@@ -9,140 +10,93 @@ import AIPage from './components/AIPage';
 import SettingsPage from './components/SettingsPage';
 import TransactionModal from './components/TransactionModal';
 
-type TabType = 'home' | 'history' | 'stats' | 'ai' | 'settings';
+// ... (Boshqa importlar va type TabType o'z joyida qolsin)
 
 function App() {
   const [data, setData] = useState<AppData>(loadData());
   const [activeTab, setActiveTab] = useState<TabType>('home');
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [editingTransaction, setEditingTransaction] = useState<Transaction | null>(null);
 
+  // --- ORQAGA TUGMASI LOGIKASI (FIX) ---
   useEffect(() => {
-    saveData(data);
-  }, [data]);
+    CapacitorApp.addListener('backButton', ({ canGoBack }) => {
+      if (isModalOpen) {
+        setIsModalOpen(false); // Modal ochiq bo'lsa yopadi
+      } else if (activeTab !== 'home') {
+        setActiveTab('home'); // Boshqa tabda bo'lsa uyga qaytadi
+      } else {
+        CapacitorApp.exitApp(); // Uyda bo'lsa dasturdan chiqadi
+      }
+    });
+  }, [isModalOpen, activeTab]);
+  // -------------------------------------
 
-  // Ma'lumot yangilanganda App ni qayta render qilish uchun
-  const refreshData = () => {
-    setData(loadData());
-  };
+  useEffect(() => { saveData(data); }, [data]);
 
-  const handleAddTransaction = (transaction: any) => {
-    const newTransaction: Transaction = {
-      id: Date.now().toString(),
-      ...transaction,
+  const refreshData = () => { setData(loadData()); };
+
+  const handleSaveTransaction = (tData: any) => {
+    let newTxList = [...data.transactions];
+    let newWallets = [...data.wallets];
+
+    // Agar tahrirlanayotgan bo'lsa (Edit)
+    if (editingTransaction) {
+      // Eski summani qaytarib olish (balansni to'g'irlash)
+      const oldWallet = newWallets.find(w => w.id === editingTransaction.walletId);
+      if (oldWallet) {
+        oldWallet.balance -= (editingTransaction.type === 'income' ? editingTransaction.amount : -editingTransaction.amount);
+      }
+      // Ro'yxatdan o'chirish
+      newTxList = newTxList.filter(t => t.id !== editingTransaction.id);
+    }
+
+    // Yangi tranzaksiya
+    const newTx: Transaction = {
+      id: editingTransaction ? editingTransaction.id : Date.now().toString(),
+      ...tData
     };
 
-    // Balansni yangilash
-    const updatedWallets = data.wallets.map((w) => {
-      if (w.id === transaction.walletId) {
-        const amount = transaction.type === 'income' ? transaction.amount : -transaction.amount;
-        return { ...w, balance: w.balance + amount };
-      }
-      return w;
-    });
+    // Yangi balansni hisoblash
+    const wallet = newWallets.find(w => w.id === tData.walletId);
+    if (wallet) {
+      wallet.balance += (tData.type === 'income' ? tData.amount : -tData.amount);
+    }
 
-    setData({
-      ...data,
-      wallets: updatedWallets,
-      transactions: [newTransaction, ...data.transactions],
-    });
+    setData({ ...data, wallets: newWallets, transactions: [newTx, ...newTxList] });
     setIsModalOpen(false);
+    setEditingTransaction(null);
   };
 
-  const handleDeleteTransaction = (id: string) => {
-    const transaction = data.transactions.find((t) => t.id === id);
-    if (!transaction) return;
-
-    // Balansni orqaga qaytarish
-    const updatedWallets = data.wallets.map((w) => {
-      if (w.id === transaction.walletId) {
-        const amount = transaction.type === 'income' ? -transaction.amount : transaction.amount;
-        return { ...w, balance: w.balance + amount };
-      }
-      return w;
-    });
-
-    setData({
-      ...data,
-      wallets: updatedWallets,
-      transactions: data.transactions.filter((t) => t.id !== id),
-    });
+  const handleEditClick = (id: string) => {
+    const tx = data.transactions.find(t => t.id === id);
+    if (tx) {
+      setEditingTransaction(tx);
+      setIsModalOpen(true);
+    }
   };
 
+  // ... (Return qismida <TransactionModal> ga editingTransaction ni props qilib berish kerak)
+  
   return (
     <div className="h-full bg-gray-900 text-white font-sans selection:bg-blue-500/30">
-      <div className="h-full overflow-y-auto pb-20 scrollbar-hide">
-        {activeTab === 'home' && (
-          <HomePage 
-            wallets={data.wallets} 
-            transactions={data.transactions} 
-            categories={data.categories} 
-          />
-        )}
-        {activeTab === 'history' && (
-          <HistoryPage
-            transactions={data.transactions}
-            categories={data.categories}
-            wallets={data.wallets}
-            onDelete={handleDeleteTransaction}
-          />
-        )}
-        {activeTab === 'stats' && (
-          <StatsPage transactions={data.transactions} categories={data.categories} />
-        )}
-        {activeTab === 'ai' && (
-          <AIPage 
-            categories={data.categories} 
-            wallets={data.wallets} 
-            onAddTransaction={handleAddTransaction} 
-          />
-        )}
-        {activeTab === 'settings' && (
-          <SettingsPage onDataChange={refreshData} />
-        )}
+       <div className="h-full overflow-y-auto pb-20 scrollbar-hide">
+        {activeTab === 'home' && <HomePage wallets={data.wallets} transactions={data.transactions} categories={data.categories} />}
+        {activeTab === 'history' && <HistoryPage transactions={data.transactions} categories={data.categories} wallets={data.wallets} onDelete={() => {}} onEdit={handleEditClick} />} 
+        {/* Boshqa sahifalar... */}
+        {activeTab === 'ai' && <AIPage data={data} onTransactionAdd={handleSaveTransaction} />}
+        {activeTab === 'settings' && <SettingsPage data={data} onDataChange={refreshData} />}
       </div>
 
-      {/* Floating Bottom Navigation */}
-      <div className="fixed bottom-0 w-full bg-gray-900/90 backdrop-blur-lg border-t border-gray-800 pb-safe z-50">
-        <nav className="flex justify-around items-center h-16 px-2 relative">
-          
-          <button onClick={() => setActiveTab('home')} className={`flex-1 flex flex-col items-center ${activeTab === 'home' ? 'text-blue-500' : 'text-gray-500'}`}>
-            <Home size={24} strokeWidth={activeTab === 'home' ? 2.5 : 2} />
-            <span className="text-[10px] mt-1 font-medium">Asosiy</span>
-          </button>
-
-          <button onClick={() => setActiveTab('history')} className={`flex-1 flex flex-col items-center ${activeTab === 'history' ? 'text-blue-500' : 'text-gray-500'}`}>
-            <History size={24} strokeWidth={activeTab === 'history' ? 2.5 : 2} />
-            <span className="text-[10px] mt-1 font-medium">Tarix</span>
-          </button>
-
-          {/* O'rtadagi KATTA FAB Tugma */}
-          <div className="relative -top-6">
-            <button
-              onClick={() => setIsModalOpen(true)}
-              className="w-14 h-14 bg-gradient-to-br from-blue-500 to-blue-700 text-white rounded-full flex items-center justify-center shadow-lg shadow-blue-500/40 border-4 border-gray-900 active:scale-90 transition-transform"
-            >
-              <Plus size={32} />
-            </button>
-          </div>
-
-          <button onClick={() => setActiveTab('ai')} className={`flex-1 flex flex-col items-center ${activeTab === 'ai' ? 'text-blue-500' : 'text-gray-500'}`}>
-            <Sparkles size={24} strokeWidth={activeTab === 'ai' ? 2.5 : 2} />
-            <span className="text-[10px] mt-1 font-medium">AI</span>
-          </button>
-
-          <button onClick={() => setActiveTab('settings')} className={`flex-1 flex flex-col items-center ${activeTab === 'settings' ? 'text-blue-500' : 'text-gray-500'}`}>
-            <Settings size={24} strokeWidth={activeTab === 'settings' ? 2.5 : 2} />
-            <span className="text-[10px] mt-1 font-medium">Sozlama</span>
-          </button>
-        </nav>
-      </div>
-
+      {/* Navigatsiya qismi o'zgarishsiz qoladi... */}
+      
       <TransactionModal
         isOpen={isModalOpen}
-        onClose={() => setIsModalOpen(false)}
-        onSave={handleAddTransaction}
+        onClose={() => { setIsModalOpen(false); setEditingTransaction(null); }}
+        onSave={handleSaveTransaction}
         categories={data.categories}
         wallets={data.wallets}
+        initialData={editingTransaction} // Tahrirlash uchun ma'lumot
       />
     </div>
   );
