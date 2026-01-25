@@ -93,9 +93,21 @@ function App() {
         {activeTab === 'home' && <HomePage wallets={data.wallets} transactions={data.transactions} categories={data.categories} />}
         {activeTab === 'history' && <HistoryPage transactions={data.transactions} categories={data.categories} wallets={data.wallets} onDelete={handleDeleteTransaction} onEdit={handleEditClick} />}
         {activeTab === 'stats' && <StatsPage transactions={data.transactions} categories={data.categories} />}
-        {activeTab === 'ai' && <AIPage categories={data.categories} wallets={data.wallets} onAddTransaction={handleSaveTransaction} />}
-        {activeTab === 'settings' && <SettingsPage data={data} onDataChange={refreshData} />}
-      </div>
+        // App.tsx ichida
+{activeTab === 'ai' && (
+  <AIPage 
+    data={data} // <-- YANGI: Butun ma'lumotlar bazasini beramiz
+    onAddTransaction={(tx) => {
+      const newTx = { ...tx, id: Date.now().toString() };
+      setData(prev => ({
+        ...prev,
+        transactions: [...prev.transactions, newTx]
+      }));
+      // Optional: Muvaffaqiyatli qo'shilganda vibratsiya yoki tovush
+    }} 
+  />
+)}
+
 
       {/* 2. MENU QISMI (QOTIRILGAN) */}
       <div className="flex-none w-full bg-gray-900 border-t border-gray-800 z-50 pb-[env(safe-area-inset-bottom)]">
