@@ -1,152 +1,144 @@
-import { useState } from 'react';
-import { Download, Upload, Key, Trash2 } from 'lucide-react';
-import { exportData, importData } from '../storage';
+import React from 'react';
+import { Download, Upload, Trash2, FileSpreadsheet } from 'lucide-react';
+import { read, utils, writeFile } from 'xlsx';
+import { exportData, saveData, loadData } from '../storage';
+import { AppData } from '../types';
 
 interface SettingsPageProps {
-  apiKey: string;
-  onApiKeyChange: (key: string) => void;
   onDataChange: () => void;
 }
 
-export default function SettingsPage({ apiKey, onApiKeyChange, onDataChange }: SettingsPageProps) {
-  const [showApiKey, setShowApiKey] = useState(false);
-  const [localApiKey, setLocalApiKey] = useState(apiKey);
+export default function SettingsPage({ onDataChange }: SettingsPageProps) {
 
-  const handleExport = () => {
-    const data = exportData();
-    const blob = new Blob([data], { type: 'application/json' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `finance-backup-${new Date().toISOString().split('T')[0]}.json`;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
+  // --- XLSX EXPORT (Zahira olish) ---
+  const handleExportXLSX = () => {
+    const currentData = JSON.parse(exportData()) as AppData;
+
+    // 1. Workbook yaratamiz
+    const wb = utils.book_new();
+
+    // 2. Ma'lumotlarni alohida varaqlarga ajratamiz
+    const wsTransactions = utils.json_to_sheet(currentData.transactions);
+    const wsWallets = utils.json_to_sheet(currentData.wallets);
+    const wsCategories = utils.json_to_sheet(currentData.categories);
+
+    // 3. Varaqlarni kitobga qo'shamiz
+    utils.book_append_sheet(wb, wsTransactions, "Tranzaksiyalar");
+    utils.book_append_sheet(wb, wsWallets, "Hamyonlar");
+    utils.book_append_sheet(wb, wsCategories, "Kategoriyalar");
+
+    // 4. Faylni yuklab beramiz
+    const date = new Date().toISOString().split('T')[0];
+    writeFile(wb, `Moliya-Zahira-${date}.xlsx`);
   };
 
-  const handleImport = (event: React.ChangeEvent<HTMLInputElement>) => {
+  // --- XLSX IMPORT (Tiklash) ---
+  const handleImportXLSX = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!file) return;
 
     const reader = new FileReader();
     reader.onload = (e) => {
-      const content = e.target?.result as string;
-      if (importData(content)) {
-        alert('Ma\'lumotlar muvaffaqiyatli yuklandi!');
+      try {
+        const data = new Uint8Array(e.target?.result as ArrayBuffer);
+        const workbook = read(data, { type: 'array' });
+
+        // Varaqlarni o'qib olish
+        const transactions = utils.sheet_to_json(workbook.Sheets["Tranzaksiyalar"] || {});
+        const wallets = utils.sheet_to_json(workbook.Sheets["Hamyonlar"] || {});
+        const categories = utils.sheet_to_json(workbook.Sheets["Kategoriyalar"] || {});
+
+        if (!transactions.length && !wallets.length) {
+          throw new Error("Fayl ichi bo'sh yoki noto'g'ri formatda");
+        }
+
+        // Yangi ma'lumotlarni shakllantirish
+        const newAppData: AppData = {
+          // @ts-ignore - Import qilingan ma'lumotlarni tipga moslash
+          transactions: transactions,
+          // @ts-ignore
+          wallets: wallets,
+          // @ts-ignore
+          categories: categories.length > 0 ? categories : loadData().categories, // Kategoriya bo'lmasa eskisini oladi
+          settings: { apiKey: '' }
+        };
+
+        // Xotiraga saqlash va yangilash
+        saveData(newAppData);
+        alert("Ma'lumotlar Excel fayldan muvaffaqiyatli tiklandi!");
         onDataChange();
-      } else {
-        alert('Xatolik: Fayl formati noto\'g\'ri');
+
+      } catch (error) {
+        console.error(error);
+        alert("Xatolik: Excel fayl formati noto'g'ri!");
       }
     };
-    reader.readAsText(file);
+    reader.readAsArrayBuffer(file);
+    // Inputni tozalash (qayta yuklash uchun)
+    event.target.value = '';
   };
 
   const handleClearData = () => {
-    if (confirm('Barcha ma\'lumotlar o\'chiriladi. Davom etasizmi?')) {
+    if (window.confirm("Rostdan ham barcha ma'lumotlarni o'chirmoqchimisiz?")) {
       localStorage.clear();
-      window.location.reload();
+      onDataChange();
+      alert("Barcha ma'lumotlar tozalandi.");
     }
   };
 
-  const handleSaveApiKey = () => {
-    onApiKeyChange(localApiKey);
-    alert('API kalit saqlandi!');
-  };
-
   return (
-    <div className="flex-1 overflow-y-auto p-4 pb-24">
+    <div className="p-4 space-y-4 pb-24 pt-safe">
       <h1 className="text-2xl font-bold text-white mb-6">Sozlamalar</h1>
 
-      <div className="space-y-4">
-        <div className="bg-gray-800 rounded-xl p-4">
-          <div className="flex items-center gap-3 mb-3">
-            <Key size={20} className="text-blue-500" />
-            <h2 className="text-lg font-semibold text-white">AI API Kaliti</h2>
-          </div>
+      {/* Excel Export/Import Blok */}
+      <div className="bg-gray-800 rounded-xl p-4 space-y-4">
+        <h2 className="text-lg font-semibold text-white flex items-center gap-2">
+          <FileSpreadsheet className="text-green-500" />
+          Excel Zahira (Backup)
+        </h2>
+        
+        <button
+          onClick={handleExportXLSX}
+          className="w-full bg-green-600 hover:bg-green-700 text-white py-3 rounded-lg font-medium active:scale-95 transition-all flex items-center justify-center gap-2"
+        >
+          <Download size={20} />
+          Excelga Yuklash (.xlsx)
+        </button>
+
+        <label className="w-full bg-blue-600 hover:bg-blue-700 text-white py-3 rounded-lg font-medium active:scale-95 transition-all flex items-center justify-center gap-2 cursor-pointer">
+          <Upload size={20} />
+          Exceldan Tiklash
           <input
-            type={showApiKey ? 'text' : 'password'}
-            value={localApiKey}
-            onChange={(e) => setLocalApiKey(e.target.value)}
-            placeholder="API kalitingizni kiriting"
-            className="w-full bg-gray-700 text-white p-3 rounded-lg border border-gray-600 focus:border-blue-500 focus:outline-none mb-3"
-            style={{ fontSize: '16px' }}
+            type="file"
+            accept=".xlsx, .xls"
+            onChange={handleImportXLSX}
+            className="hidden"
           />
-          <div className="flex gap-2">
-            <button
-              onClick={() => setShowApiKey(!showApiKey)}
-              className="flex-1 bg-gray-700 text-white py-2 rounded-lg active:scale-95 transition-all"
-            >
-              {showApiKey ? 'Yashirish' : 'Ko\'rsatish'}
-            </button>
-            <button
-              onClick={handleSaveApiKey}
-              className="flex-1 bg-blue-600 text-white py-2 rounded-lg active:scale-95 transition-all"
-            >
-              Saqlash
-            </button>
-          </div>
-        </div>
+        </label>
+        
+        <p className="text-xs text-gray-500 text-center">
+          Ogohlantirish: Tiklash jarayoni mavjud ma'lumotlarni o'chirib yuboradi.
+        </p>
+      </div>
 
-        <div className="bg-gray-800 rounded-xl p-4">
-          <div className="flex items-center gap-3 mb-3">
-            <Download size={20} className="text-green-500" />
-            <h2 className="text-lg font-semibold text-white">Zaxira nusxa</h2>
-          </div>
-          <p className="text-gray-400 text-sm mb-3">
-            Barcha ma'lumotlaringizni JSON faylga saqlang
-          </p>
-          <button
-            onClick={handleExport}
-            className="w-full bg-green-600 text-white py-3 rounded-lg font-medium active:scale-95 transition-all flex items-center justify-center gap-2"
-          >
-            <Download size={20} />
-            Zaxira yuklab olish
-          </button>
+      {/* Xavfli Hudud */}
+      <div className="bg-gray-800 rounded-xl p-4 border border-red-900/30">
+        <div className="flex items-center gap-3 mb-3">
+          <Trash2 size={20} className="text-red-500" />
+          <h2 className="text-lg font-semibold text-white">Xavfli hudud</h2>
         </div>
+        <button
+          onClick={handleClearData}
+          className="w-full bg-red-600/20 text-red-500 hover:bg-red-600 hover:text-white border border-red-600 py-3 rounded-lg font-medium active:scale-95 transition-all flex items-center justify-center gap-2"
+        >
+          <Trash2 size={20} />
+          Barchasini o'chirish
+        </button>
+      </div>
 
-        <div className="bg-gray-800 rounded-xl p-4">
-          <div className="flex items-center gap-3 mb-3">
-            <Upload size={20} className="text-blue-500" />
-            <h2 className="text-lg font-semibold text-white">Ma'lumotlarni tiklash</h2>
-          </div>
-          <p className="text-gray-400 text-sm mb-3">
-            Zaxira fayldan ma'lumotlarni tiklang
-          </p>
-          <label className="w-full bg-blue-600 text-white py-3 rounded-lg font-medium active:scale-95 transition-all flex items-center justify-center gap-2 cursor-pointer">
-            <Upload size={20} />
-            Faylni tanlash
-            <input
-              type="file"
-              accept=".json"
-              onChange={handleImport}
-              className="hidden"
-            />
-          </label>
-        </div>
-
-        <div className="bg-gray-800 rounded-xl p-4">
-          <div className="flex items-center gap-3 mb-3">
-            <Trash2 size={20} className="text-red-500" />
-            <h2 className="text-lg font-semibold text-white">Ma'lumotlarni tozalash</h2>
-          </div>
-          <p className="text-gray-400 text-sm mb-3">
-            Barcha ma'lumotlarni o'chirish (qaytarib bo'lmaydi!)
-          </p>
-          <button
-            onClick={handleClearData}
-            className="w-full bg-red-600 text-white py-3 rounded-lg font-medium active:scale-95 transition-all flex items-center justify-center gap-2"
-          >
-            <Trash2 size={20} />
-            Barchasini o'chirish
-          </button>
-        </div>
-
-        <div className="bg-gray-800 rounded-xl p-4">
-          <h2 className="text-lg font-semibold text-white mb-2">Dastur haqida</h2>
-          <p className="text-gray-400 text-sm">Moliya boshqaruv ilova v1.0</p>
-          <p className="text-gray-500 text-xs mt-1">Offline rejimda ishlaydi</p>
-        </div>
+      <div className="text-center text-gray-500 text-sm pt-4">
+        Hisobchi AI v1.0.2 (Excel Edition) <br />
+        Senior Dev tomonidan yaratildi
       </div>
     </div>
   );
