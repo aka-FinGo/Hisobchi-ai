@@ -1,0 +1,33 @@
+name: Web Preview
+on:
+  push:
+    branches: [ main ]
+
+permissions:
+  contents: write
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Install & Build
+        run: |
+          npm install
+          npm run build
+          # Vite loyihalarida base path muammosi bo'lmasligi uchun bo'sh fayl
+          touch dist/.nojekyll 
+
+      - name: Deploy to GitHub Pages
+        uses: JamesIves/github-pages-deploy-action@v4
+        with:
+          folder: dist # Vite build qilgan papka
+          branch: gh-pages # Alohida branchga yuklaydi
+          
