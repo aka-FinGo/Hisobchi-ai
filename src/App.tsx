@@ -140,47 +140,36 @@ function App() {
         )}
       </div>
 
-      {/* Pastki Navigatsiya (Bottom Bar) */}
-      <div className="bg-gray-900/95 backdrop-blur border-t border-gray-800 pb-safe pt-2 px-6 fixed bottom-0 left-0 right-0 z-50">
-        <div className="flex justify-between items-end pb-2">
+            {/* YANGI: Floating Bottom Navbar (Suzib yuruvchi menyu) */}
+      <div className="fixed bottom-6 left-6 right-6 z-50">
+        <div className="glass-card rounded-3xl p-2 px-6 flex justify-between items-center shadow-2xl shadow-black/50">
           
-          <button onClick={() => setActiveTab('home')} className={`flex-1 flex flex-col items-center py-2 ${activeTab === 'home' ? 'text-blue-500' : 'text-gray-500'}`}>
-            <Home size={24} strokeWidth={activeTab === 'home' ? 2.5 : 2} />
-            <span className="text-[10px] mt-1 font-medium">Asosiy</span>
+          <button onClick={() => setActiveTab('home')} className={`p-3 rounded-2xl transition-all duration-300 ${activeTab === 'home' ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/40 translate-y-[-10px]' : 'text-gray-400 hover:text-white'}`}>
+            <Home size={22} />
           </button>
 
-          <button onClick={() => setActiveTab('stats')} className={`flex-1 flex flex-col items-center py-2 ${activeTab === 'stats' ? 'text-blue-500' : 'text-gray-500'}`}>
-            <History size={24} strokeWidth={activeTab === 'stats' ? 2.5 : 2} />
-            <span className="text-[10px] mt-1 font-medium">Statistika</span>
+          <button onClick={() => setActiveTab('stats')} className={`p-3 rounded-2xl transition-all duration-300 ${activeTab === 'stats' ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/40 translate-y-[-10px]' : 'text-gray-400 hover:text-white'}`}>
+            <History size={22} />
           </button>
 
-          {/* O'rtadagi Katta Plyus Tugmasi */}
-          <div className="relative -top-5">
-            <button
-              onClick={() => { setEditingTransaction(null); setIsModalOpen(true); }}
-              className="w-14 h-14 bg-gradient-to-br from-blue-500 to-blue-700 text-white rounded-full flex items-center justify-center shadow-lg shadow-blue-500/40 border-4 border-gray-900 active:scale-90 transition-transform"
-            >
-              <Plus size={32} />
-            </button>
-          </div>
-
-          <button onClick={() => setActiveTab('ai')} className={`flex-1 flex flex-col items-center py-2 ${activeTab === 'ai' ? 'text-blue-500' : 'text-gray-500'}`}>
-            <Sparkles size={24} strokeWidth={activeTab === 'ai' ? 2.5 : 2} />
-            <span className="text-[10px] mt-1 font-medium">AI</span>
+          {/* Markaziy AI/Plus tugmasi */}
+          <button
+            onClick={() => { setEditingTransaction(null); setIsModalOpen(true); }}
+            className="w-14 h-14 bg-gradient-to-r from-pink-500 to-rose-500 rounded-full text-white flex items-center justify-center shadow-lg shadow-rose-500/40 transform -translate-y-6 border-[6px] border-[#0f172a] active:scale-90 transition-transform"
+          >
+            <Plus size={28} strokeWidth={3} />
           </button>
 
-          <button onClick={() => setActiveTab('history')} className={`flex-1 flex flex-col items-center py-2 ${activeTab === 'history' ? 'text-blue-500' : 'text-gray-500'}`}>
-            <Settings size={24} strokeWidth={activeTab === 'history' ? 2.5 : 2} />
-            <span className="text-[10px] mt-1 font-medium">Tarix</span>
+          <button onClick={() => setActiveTab('ai')} className={`p-3 rounded-2xl transition-all duration-300 ${activeTab === 'ai' ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/40 translate-y-[-10px]' : 'text-gray-400 hover:text-white'}`}>
+            <Sparkles size={22} />
           </button>
           
-          {/* Sozlamalar History iconiga o'xshab qolgan ekan, to'g'irlab qo'ydim: Tarix -> HistoryPage, Sozlamalar -> SettingsPage */}
-           <button onClick={() => setActiveTab('settings')} className={`flex-1 flex flex-col items-center py-2 ${activeTab === 'settings' ? 'text-blue-500' : 'text-gray-500'}`}>
-            <Settings size={24} strokeWidth={activeTab === 'settings' ? 2.5 : 2} />
-            <span className="text-[10px] mt-1 font-medium">Sozlama</span>
+          <button onClick={() => setActiveTab('settings')} className={`p-3 rounded-2xl transition-all duration-300 ${activeTab === 'settings' ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/40 translate-y-[-10px]' : 'text-gray-400 hover:text-white'}`}>
+            <Settings size={22} />
           </button>
         </div>
       </div>
+
 
       <TransactionModal
         isOpen={isModalOpen}
