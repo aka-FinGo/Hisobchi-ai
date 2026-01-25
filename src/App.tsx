@@ -20,185 +20,122 @@ function App() {
     saveData(data);
   }, [data]);
 
-  const handleAddTransaction = (transaction: {
-    amount: number;
-    categoryId: string;
-    walletId: string;
-    type: TransactionType;
-    date: string;
-    note?: string;
-  }) => {
+  // Ma'lumot yangilanganda App ni qayta render qilish uchun
+  const refreshData = () => {
+    setData(loadData());
+  };
+
+  const handleAddTransaction = (transaction: any) => {
     const newTransaction: Transaction = {
       id: Date.now().toString(),
       ...transaction,
     };
 
-    const wallet = data.wallets.find((w) => w.id === transaction.walletId);
-    if (wallet) {
-      const updatedWallets = data.wallets.map((w) => {
-        if (w.id === transaction.walletId) {
-          return {
-            ...w,
-            balance:
-              transaction.type === 'income'
-                ? w.balance + transaction.amount
-                : w.balance - transaction.amount,
-          };
-        }
-        return w;
-      });
+    // Balansni yangilash
+    const updatedWallets = data.wallets.map((w) => {
+      if (w.id === transaction.walletId) {
+        const amount = transaction.type === 'income' ? transaction.amount : -transaction.amount;
+        return { ...w, balance: w.balance + amount };
+      }
+      return w;
+    });
 
-      setData({
-        ...data,
-        transactions: [...data.transactions, newTransaction],
-        wallets: updatedWallets,
-      });
-    }
+    setData({
+      ...data,
+      wallets: updatedWallets,
+      transactions: [newTransaction, ...data.transactions],
+    });
+    setIsModalOpen(false);
   };
 
   const handleDeleteTransaction = (id: string) => {
     const transaction = data.transactions.find((t) => t.id === id);
     if (!transaction) return;
 
-    if (confirm('Bu tranzaksiyani o\'chirmoqchimisiz?')) {
-      const updatedWallets = data.wallets.map((w) => {
-        if (w.id === transaction.walletId) {
-          return {
-            ...w,
-            balance:
-              transaction.type === 'income'
-                ? w.balance - transaction.amount
-                : w.balance + transaction.amount,
-          };
-        }
-        return w;
-      });
+    // Balansni orqaga qaytarish
+    const updatedWallets = data.wallets.map((w) => {
+      if (w.id === transaction.walletId) {
+        const amount = transaction.type === 'income' ? -transaction.amount : transaction.amount;
+        return { ...w, balance: w.balance + amount };
+      }
+      return w;
+    });
 
-      setData({
-        ...data,
-        transactions: data.transactions.filter((t) => t.id !== id),
-        wallets: updatedWallets,
-      });
-    }
-  };
-
-  const handleApiKeyChange = (key: string) => {
     setData({
       ...data,
-      settings: { ...data.settings, apiKey: key },
+      wallets: updatedWallets,
+      transactions: data.transactions.filter((t) => t.id !== id),
     });
   };
 
-  const handleDataChange = () => {
-    setData(loadData());
-  };
-
-  const renderContent = () => {
-    switch (activeTab) {
-      case 'home':
-        return (
-          <HomePage
-            wallets={data.wallets}
-            transactions={data.transactions}
-            categories={data.categories}
+  return (
+    <div className="h-full bg-gray-900 text-white font-sans selection:bg-blue-500/30">
+      <div className="h-full overflow-y-auto pb-20 scrollbar-hide">
+        {activeTab === 'home' && (
+          <HomePage 
+            wallets={data.wallets} 
+            transactions={data.transactions} 
+            categories={data.categories} 
           />
-        );
-      case 'history':
-        return (
+        )}
+        {activeTab === 'history' && (
           <HistoryPage
             transactions={data.transactions}
             categories={data.categories}
             wallets={data.wallets}
             onDelete={handleDeleteTransaction}
           />
-        );
-      case 'stats':
-        return (
+        )}
+        {activeTab === 'stats' && (
           <StatsPage transactions={data.transactions} categories={data.categories} />
-        );
-      case 'ai':
-        return (
-          <AIPage
-            categories={data.categories}
-            wallets={data.wallets}
-            onAddTransaction={handleAddTransaction}
+        )}
+        {activeTab === 'ai' && (
+          <AIPage 
+            categories={data.categories} 
+            wallets={data.wallets} 
+            onAddTransaction={handleAddTransaction} 
           />
-        );
-      case 'settings':
-        return (
-          <SettingsPage
-            apiKey={data.settings.apiKey}
-            onApiKeyChange={handleApiKeyChange}
-            onDataChange={handleDataChange}
-          />
-        );
-      default:
-        return null;
-    }
-  };
+        )}
+        {activeTab === 'settings' && (
+          <SettingsPage onDataChange={refreshData} />
+        )}
+      </div>
 
-  return (
-    <div className="h-screen flex flex-col bg-gray-900 overflow-hidden">
-      {renderContent()}
+      {/* Floating Bottom Navigation */}
+      <div className="fixed bottom-0 w-full bg-gray-900/90 backdrop-blur-lg border-t border-gray-800 pb-safe z-50">
+        <nav className="flex justify-around items-center h-16 px-2 relative">
+          
+          <button onClick={() => setActiveTab('home')} className={`flex-1 flex flex-col items-center ${activeTab === 'home' ? 'text-blue-500' : 'text-gray-500'}`}>
+            <Home size={24} strokeWidth={activeTab === 'home' ? 2.5 : 2} />
+            <span className="text-[10px] mt-1 font-medium">Asosiy</span>
+          </button>
 
-      <button
-        onClick={() => setIsModalOpen(true)}
-        className="fixed bottom-20 right-4 w-14 h-14 bg-blue-600 rounded-full flex items-center justify-center shadow-lg active:scale-95 transition-all z-40"
-      >
-        <Plus size={28} className="text-white" />
-      </button>
+          <button onClick={() => setActiveTab('history')} className={`flex-1 flex flex-col items-center ${activeTab === 'history' ? 'text-blue-500' : 'text-gray-500'}`}>
+            <History size={24} strokeWidth={activeTab === 'history' ? 2.5 : 2} />
+            <span className="text-[10px] mt-1 font-medium">Tarix</span>
+          </button>
 
-      <nav className="fixed bottom-0 left-0 right-0 bg-gray-800 border-t border-gray-700 pb-safe">
-        <div className="flex justify-around items-center h-16">
-          <button
-            onClick={() => setActiveTab('home')}
-            className={`flex flex-col items-center justify-center flex-1 h-full active:bg-gray-700 transition-colors ${
-              activeTab === 'home' ? 'text-blue-500' : 'text-gray-400'
-            }`}
-          >
-            <Home size={24} />
-            <span className="text-xs mt-1">Asosiy</span>
+          {/* O'rtadagi KATTA FAB Tugma */}
+          <div className="relative -top-6">
+            <button
+              onClick={() => setIsModalOpen(true)}
+              className="w-14 h-14 bg-gradient-to-br from-blue-500 to-blue-700 text-white rounded-full flex items-center justify-center shadow-lg shadow-blue-500/40 border-4 border-gray-900 active:scale-90 transition-transform"
+            >
+              <Plus size={32} />
+            </button>
+          </div>
+
+          <button onClick={() => setActiveTab('ai')} className={`flex-1 flex flex-col items-center ${activeTab === 'ai' ? 'text-blue-500' : 'text-gray-500'}`}>
+            <Sparkles size={24} strokeWidth={activeTab === 'ai' ? 2.5 : 2} />
+            <span className="text-[10px] mt-1 font-medium">AI</span>
           </button>
-          <button
-            onClick={() => setActiveTab('history')}
-            className={`flex flex-col items-center justify-center flex-1 h-full active:bg-gray-700 transition-colors ${
-              activeTab === 'history' ? 'text-blue-500' : 'text-gray-400'
-            }`}
-          >
-            <History size={24} />
-            <span className="text-xs mt-1">Tarix</span>
+
+          <button onClick={() => setActiveTab('settings')} className={`flex-1 flex flex-col items-center ${activeTab === 'settings' ? 'text-blue-500' : 'text-gray-500'}`}>
+            <Settings size={24} strokeWidth={activeTab === 'settings' ? 2.5 : 2} />
+            <span className="text-[10px] mt-1 font-medium">Sozlama</span>
           </button>
-          <button
-            onClick={() => setActiveTab('stats')}
-            className={`flex flex-col items-center justify-center flex-1 h-full active:bg-gray-700 transition-colors ${
-              activeTab === 'stats' ? 'text-blue-500' : 'text-gray-400'
-            }`}
-          >
-            <div className="w-8 h-8 flex items-center justify-center">
-              <div className="w-2 h-2 bg-current rounded-full"></div>
-            </div>
-            <span className="text-xs mt-1">Statistika</span>
-          </button>
-          <button
-            onClick={() => setActiveTab('ai')}
-            className={`flex flex-col items-center justify-center flex-1 h-full active:bg-gray-700 transition-colors ${
-              activeTab === 'ai' ? 'text-blue-500' : 'text-gray-400'
-            }`}
-          >
-            <Sparkles size={24} />
-            <span className="text-xs mt-1">AI</span>
-          </button>
-          <button
-            onClick={() => setActiveTab('settings')}
-            className={`flex flex-col items-center justify-center flex-1 h-full active:bg-gray-700 transition-colors ${
-              activeTab === 'settings' ? 'text-blue-500' : 'text-gray-400'
-            }`}
-          >
-            <Settings size={24} />
-            <span className="text-xs mt-1">Sozlamalar</span>
-          </button>
-        </div>
-      </nav>
+        </nav>
+      </div>
 
       <TransactionModal
         isOpen={isModalOpen}
