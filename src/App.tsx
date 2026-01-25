@@ -92,9 +92,8 @@ function App() {
       <div className="flex-1 overflow-y-auto scrollbar-hide w-full relative">
         {activeTab === 'home' && <HomePage wallets={data.wallets} transactions={data.transactions} categories={data.categories} />}
         {activeTab === 'history' && <HistoryPage transactions={data.transactions} categories={data.categories} wallets={data.wallets} onDelete={handleDeleteTransaction} onEdit={handleEditClick} />}
-        {activeTab === 'stats' && <StatsPage transactions={data.transactions} categories={data.categories} />}
-        // App.tsx ichida
-{activeTab === 'ai' && (
+        {activeTab === 'stats' && <StatsPage transactions={data.transactions} categories={data.categories} />} 
+        {activeTab === 'ai' && (
   <AIPage 
     data={data} // <-- YANGI: Butun ma'lumotlar bazasini beramiz
     onAddTransaction={(tx) => {
