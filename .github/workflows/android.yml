@@ -1,4 +1,5 @@
-name: Build Android APK
+name: Build Android Pro
+
 on:
   push:
     branches: [ main ]
@@ -7,18 +8,22 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout
+      - name: Checkout Code
         uses: actions/checkout@v4
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: 20
-          cache: 'npm'
 
-      - name: Install Dependencies
-        run: npm install --force
+      # 1-MUHIM QADAM: Toza o'rnatish
+      - name: Clean Install
+        run: |
+          rm -rf node_modules
+          rm -f package-lock.json
+          npm install
 
+      # 2-MUHIM QADAM: TypeScript xatolarisiz build qilish
       - name: Build Web App
         run: npm run build
 
@@ -28,13 +33,17 @@ jobs:
           distribution: 'zulu'
           java-version: '17'
 
-      - name: Build Android
+      # 3-MUHIM QADAM: Capacitor Sync va Build
+      - name: Build Android APK
         run: |
-          npx cap sync
-          # Agar android papkasi bo'lmasa, yaratish
+          # Agar android papkasi bo'lmasa, uni yaratish
           if [ ! -d "android" ]; then
             npx cap add android
           fi
+          
+          # Endi aniq ishlaydi
+          npx cap sync
+          
           cd android
           chmod +x ./gradlew
           ./gradlew assembleDebug
@@ -42,5 +51,5 @@ jobs:
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
-          name: Hisobchi-AI-APK
+          name: Hisobchi-AI-Pro
           path: android/app/build/outputs/apk/debug/app-debug.apk
