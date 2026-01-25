@@ -1,4 +1,4 @@
-name: Build Android Pro
+name: Build Android Final
 
 on:
   push:
@@ -16,14 +16,16 @@ jobs:
         with:
           node-version: 20
 
-      # 1-MUHIM QADAM: Toza o'rnatish
-      - name: Clean Install
+      # 1. Barchasini tozalab, noldan o'rnatish
+      - name: Install Dependencies
         run: |
           rm -rf node_modules
           rm -f package-lock.json
           npm install
+          # Capacitor CLI ni majburan o'rnatamiz (Eng muhim joyi shu!)
+          npm install -D @capacitor/cli @capacitor/core
 
-      # 2-MUHIM QADAM: TypeScript xatolarisiz build qilish
+      # 2. Veb qismini qurish
       - name: Build Web App
         run: npm run build
 
@@ -33,7 +35,7 @@ jobs:
           distribution: 'zulu'
           java-version: '17'
 
-      # 3-MUHIM QADAM: Capacitor Sync va Build
+      # 3. Android Build (Xatosiz variant)
       - name: Build Android APK
         run: |
           # Agar android papkasi bo'lmasa, uni yaratish
@@ -41,7 +43,7 @@ jobs:
             npx cap add android
           fi
           
-          # Endi aniq ishlaydi
+          # Endi cap buyrug'i 100% ishlaydi
           npx cap sync
           
           cd android
@@ -51,5 +53,5 @@ jobs:
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
-          name: Hisobchi-AI-Pro
+          name: Hisobchi-AI-Final
           path: android/app/build/outputs/apk/debug/app-debug.apk
