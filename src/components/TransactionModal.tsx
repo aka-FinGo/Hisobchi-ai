@@ -1,180 +1,110 @@
-import { useState } from 'react';
-import { X } from 'lucide-react';
-import * as Icons from 'lucide-react';
-import { Category, Wallet, TransactionType } from '../types';
+import { useState, useEffect } from 'react';
+import { X, CalendarClock } from 'lucide-react';
+import { Category, Wallet, Transaction, TransactionType } from '../types';
 
-interface TransactionModalProps {
+interface Props {
   isOpen: boolean;
   onClose: () => void;
-  onSave: (transaction: {
-    amount: number;
-    categoryId: string;
-    walletId: string;
-    type: TransactionType;
-    date: string;
-    note?: string;
-  }) => void;
+  onSave: (data: any) => void;
   categories: Category[];
   wallets: Wallet[];
+  initialData?: Transaction | null; // Tahrirlash uchun ma'lumot
 }
 
-export default function TransactionModal({
-  isOpen,
-  onClose,
-  onSave,
-  categories,
-  wallets,
-}: TransactionModalProps) {
-  const [type, setType] = useState<TransactionType>('expense');
+export default function TransactionModal({ isOpen, onClose, onSave, categories, wallets, initialData }: Props) {
   const [amount, setAmount] = useState('');
+  const [subCategory, setSubCategory] = useState(''); // Podkategoriya
+  const [period, setPeriod] = useState(new Date().toISOString().slice(0, 7)); // "2024-01"
   const [categoryId, setCategoryId] = useState('');
-  const [walletId, setWalletId] = useState(wallets[0]?.id || '');
+  const [walletId, setWalletId] = useState('');
   const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
-  const [note, setNote] = useState('');
+
+  // Modal ochilganda ma'lumotlarni to'ldirish (Agar tahrirlanayotgan bo'lsa)
+  useEffect(() => {
+    if (initialData) {
+      setAmount(initialData.amount.toString());
+      setCategoryId(initialData.categoryId);
+      setWalletId(initialData.walletId);
+      setDate(initialData.date);
+      setSubCategory(initialData.subCategory || '');
+      setPeriod(initialData.period || new Date().toISOString().slice(0, 7));
+    } else {
+      setAmount(''); setCategoryId(''); setSubCategory('');
+    }
+  }, [initialData, isOpen]);
 
   if (!isOpen) return null;
 
-  const filteredCategories = categories.filter((c) => c.type === type);
-
   const handleSave = () => {
-    if (!amount || !categoryId || !walletId) return;
-
     onSave({
       amount: parseFloat(amount),
       categoryId,
       walletId,
-      type,
       date,
-      note: note || undefined,
+      subCategory,
+      period,
+      type: categories.find(c => c.id === categoryId)?.type || 'expense'
     });
-
-    setAmount('');
-    setCategoryId('');
-    setNote('');
-    onClose();
-  };
-
-  const getIcon = (iconName: string) => {
-    const IconComponent = (Icons as any)[iconName];
-    return IconComponent ? <IconComponent size={24} /> : null;
   };
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-90 z-50 flex flex-col">
-      <div className="flex items-center justify-between p-4 border-b border-gray-700">
-        <h2 className="text-xl font-semibold text-white">Tranzaksiya qo'shish</h2>
-        <button
-          onClick={onClose}
-          className="text-gray-400 active:text-white transition-colors"
-        >
-          <X size={24} />
-        </button>
-      </div>
-
-      <div className="flex-1 overflow-y-auto p-4 pb-24">
-        <div className="flex gap-2 mb-6">
-          <button
-            onClick={() => setType('expense')}
-            className={`flex-1 py-3 rounded-lg font-medium transition-all active:scale-95 ${
-              type === 'expense'
-                ? 'bg-red-600 text-white'
-                : 'bg-gray-800 text-gray-400'
-            }`}
-          >
-            Chiqim
-          </button>
-          <button
-            onClick={() => setType('income')}
-            className={`flex-1 py-3 rounded-lg font-medium transition-all active:scale-95 ${
-              type === 'income'
-                ? 'bg-green-600 text-white'
-                : 'bg-gray-800 text-gray-400'
-            }`}
-          >
-            Daromad
-          </button>
+    <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-end sm:items-center justify-center">
+      <div className="bg-gray-900 w-full max-w-md rounded-t-3xl sm:rounded-3xl p-6 border-t border-gray-800">
+        <div className="flex justify-between items-center mb-6">
+          <h2 className="text-xl font-bold text-white">
+            {initialData ? 'Tahrirlash' : 'Yangi tranzaksiya'}
+          </h2>
+          <button onClick={onClose}><X className="text-gray-400" /></button>
         </div>
 
-        <div className="mb-6">
-          <label className="block text-gray-400 mb-2 text-sm">Summa</label>
+        <div className="space-y-4 max-h-[70vh] overflow-y-auto">
+          {/* Summa */}
           <input
             type="number"
             value={amount}
             onChange={(e) => setAmount(e.target.value)}
-            placeholder="0"
-            className="w-full bg-gray-800 text-white text-2xl p-4 rounded-lg border border-gray-700 focus:border-blue-500 focus:outline-none"
-            style={{ fontSize: '24px' }}
+            placeholder="Summa (so'm)"
+            className="w-full bg-gray-800 text-2xl font-bold text-white p-4 rounded-xl border border-gray-700 focus:border-blue-500 outline-none"
           />
-        </div>
 
-        <div className="mb-6">
-          <label className="block text-gray-400 mb-3 text-sm">Kategoriya</label>
-          <div className="grid grid-cols-4 gap-3">
-            {filteredCategories.map((category) => (
-              <button
-                key={category.id}
-                onClick={() => setCategoryId(category.id)}
-                className={`flex flex-col items-center justify-center p-3 rounded-lg transition-all active:scale-95 ${
-                  categoryId === category.id
-                    ? 'bg-blue-600 text-white'
-                    : 'bg-gray-800 text-gray-400'
-                }`}
-              >
-                <div className="mb-1">{getIcon(category.icon)}</div>
-                <span className="text-xs text-center">{category.name}</span>
-              </button>
-            ))}
+          {/* Davr (Qaysi oy uchun) */}
+          <div className="flex gap-2">
+             <div className="flex-1">
+                <label className="text-xs text-gray-400 block mb-1">Sanasi</label>
+                <input type="date" value={date} onChange={e => setDate(e.target.value)} className="w-full bg-gray-800 text-white p-3 rounded-xl border border-gray-700"/>
+             </div>
+             <div className="flex-1">
+                <label className="text-xs text-blue-400 block mb-1 flex items-center gap-1"><CalendarClock size={12}/> Qaysi oy hisobidan?</label>
+                <input type="month" value={period} onChange={e => setPeriod(e.target.value)} className="w-full bg-gray-800 text-white p-3 rounded-xl border border-blue-900/50"/>
+             </div>
           </div>
-        </div>
 
-        <div className="mb-6">
-          <label className="block text-gray-400 mb-2 text-sm">Hamyon</label>
-          <select
-            value={walletId}
-            onChange={(e) => setWalletId(e.target.value)}
-            className="w-full bg-gray-800 text-white p-4 rounded-lg border border-gray-700 focus:border-blue-500 focus:outline-none"
-            style={{ fontSize: '16px' }}
-          >
-            {wallets.map((wallet) => (
-              <option key={wallet.id} value={wallet.id}>
-                {wallet.name}
-              </option>
-            ))}
+          {/* Podkategoriya */}
+          <div>
+            <label className="text-xs text-gray-400 block mb-1">Aniqroq (ixtiyoriy)</label>
+            <input 
+              type="text" 
+              value={subCategory} 
+              onChange={e => setSubCategory(e.target.value)} 
+              placeholder="Masalan: 123_01 zakaz uchun"
+              className="w-full bg-gray-800 text-white p-3 rounded-xl border border-gray-700"
+            />
+          </div>
+
+          {/* Kategoriya va Hamyon tanlash (Qisqartirilgan) */}
+          <select value={categoryId} onChange={e => setCategoryId(e.target.value)} className="w-full bg-gray-800 text-white p-3 rounded-xl border border-gray-700">
+            <option value="">Kategoriya tanlang</option>
+            {categories.map(c => <option key={c.id} value={c.id}>{c.icon} {c.name}</option>)}
           </select>
-        </div>
 
-        <div className="mb-6">
-          <label className="block text-gray-400 mb-2 text-sm">Sana</label>
-          <input
-            type="date"
-            value={date}
-            onChange={(e) => setDate(e.target.value)}
-            className="w-full bg-gray-800 text-white p-4 rounded-lg border border-gray-700 focus:border-blue-500 focus:outline-none"
-            style={{ fontSize: '16px' }}
-          />
-        </div>
+          <select value={walletId} onChange={e => setWalletId(e.target.value)} className="w-full bg-gray-800 text-white p-3 rounded-xl border border-gray-700">
+            {wallets.map(w => <option key={w.id} value={w.id}>{w.name}</option>)}
+          </select>
 
-        <div className="mb-6">
-          <label className="block text-gray-400 mb-2 text-sm">Izoh (ixtiyoriy)</label>
-          <textarea
-            value={note}
-            onChange={(e) => setNote(e.target.value)}
-            placeholder="Izoh yozing..."
-            className="w-full bg-gray-800 text-white p-4 rounded-lg border border-gray-700 focus:border-blue-500 focus:outline-none resize-none"
-            style={{ fontSize: '16px' }}
-            rows={3}
-          />
+          <button onClick={handleSave} disabled={!amount || !categoryId} className="w-full bg-blue-600 py-4 rounded-xl text-white font-bold mt-4">
+            Saqlash
+          </button>
         </div>
-      </div>
-
-      <div className="fixed bottom-0 left-0 right-0 p-4 bg-gray-900 border-t border-gray-700">
-        <button
-          onClick={handleSave}
-          disabled={!amount || !categoryId || !walletId}
-          className="w-full bg-blue-600 text-white py-4 rounded-lg font-medium disabled:opacity-50 disabled:cursor-not-allowed active:scale-95 transition-all"
-        >
-          Saqlash
-        </button>
       </div>
     </div>
   );
