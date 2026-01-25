@@ -1,41 +1,42 @@
-export type TransactionType = 'income' | 'expense';
-export type WalletType = 'cash' | 'card' | 'dollar';
-export type AIProvider = 'gemini' | 'groq' | 'openai';
+// src/types.ts
 
-export interface Category {
-  id: string;
-  name: string;
-  icon: string;
-  type: TransactionType;
-  subCategories?: string[]; // Podkategoriyalar
-}
+export type TransactionType = 'income' | 'expense';
+export type Currency = 'UZS' | 'USD';
 
 export interface Wallet {
   id: string;
   name: string;
-  type: WalletType;
+  type: 'cash' | 'card' | 'dollar';
   balance: number;
-  currency: string;
+  currency: Currency;
+  colorTheme?: string; // Kartaning rangi uchun (optional)
+}
+
+export interface Category {
+  id: string;
+  name: string;
+  icon: string; // Lucide icon nomi (string sifatida)
+  type: TransactionType;
+  subCategories?: string[]; // YANGI: Podkategoriyalar ro'yxati (faqat nomlari)
 }
 
 export interface Transaction {
   id: string;
   amount: number;
   categoryId: string;
-  subCategory?: string; // Aniqroq: "Zakaz 123"
+  subCategory?: string; // Agar tanlangan bo'lsa
   walletId: string;
   type: TransactionType;
-  date: string;       // Tranzaksiya bo'lgan vaqt
-  period?: string;    // Qaysi davr uchun (Masalan: "2023-12" dekabr oyligi)
+  date: string;
   note?: string;
 }
 
 export interface AISettings {
-  provider: AIProvider;
+  provider: 'gemini' | 'groq' | 'openai';
   apiKey: string;
   model: string;
   tokensUsed: number;
-  tokenLimit: number; // Ogohlantirish uchun
+  tokenLimit: number;
 }
 
 export interface AppData {
