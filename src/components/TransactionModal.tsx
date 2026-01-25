@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { X, Check, Calendar, CreditCard, DollarSign, Wallet as WalletIcon, ChevronDown } from 'lucide-react';
+import { X, Check, Calendar, CreditCard, DollarSign, Wallet as WalletIcon } from 'lucide-react';
 import * as Icons from 'lucide-react'; // Barcha ikonkalarni import qilamiz
 import { TransactionType, Category, Wallet, Transaction } from '../types';
 
@@ -178,7 +178,12 @@ export default function TransactionModal({
                 <div className={`absolute inset-0 bg-gradient-to-br ${wallet.colorTheme || 'from-gray-700 to-gray-900'} opacity-20 z-0`}></div>
                 <div className="relative z-10 flex justify-between items-start">
                   {wallet.type === 'dollar' ? <DollarSign size={16} className="text-white"/> : wallet.type === 'card' ? <CreditCard size={16} className="text-white"/> : <WalletIcon size={16} className="text-white"/>}
-                  {walletId === wallet.id && <div className={`w-4 h-4 rounded-full ${bgColor} flex items-center justify-center`}<Check size={10} className="text-white"/></div>}
+                  {/* XATO SHU YERDA EDI. > belgisi qo'shildi */}
+                  {walletId === wallet.id && (
+                    <div className={`w-4 h-4 rounded-full ${bgColor} flex items-center justify-center`}>
+                      <Check size={10} className="text-white"/>
+                    </div>
+                  )}
                 </div>
                 <p className="relative z-10 text-white text-xs font-medium truncate">{wallet.name}</p>
               </button>
