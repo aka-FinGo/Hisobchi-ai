@@ -23,12 +23,17 @@ const defaultWallets: Wallet[] = [
   { id: 'w3', name: 'Dollar', type: 'dollar', balance: 0, currency: 'USD' },
 ];
 
+// Standart (boshlang'ich) holat
 const defaultData: AppData = {
   wallets: defaultWallets,
   transactions: [],
   categories: defaultCategories,
-  settings: {
-    apiKey: '',
+  aiSettings: {
+    provider: 'gemini',
+    apiKey: '', // API kalit bo'sh bo'ladi
+    model: 'gemini-1.5-flash',
+    tokensUsed: 0,
+    tokenLimit: 1000000,
   },
 };
 
@@ -36,7 +41,18 @@ export const loadData = (): AppData => {
   try {
     const stored = localStorage.getItem(STORAGE_KEY);
     if (stored) {
-      return JSON.parse(stored);
+      const parsedData = JSON.parse(stored);
+      
+      // MIGRATSIYA: Eski ma'lumotlarni yangi formatga moslash
+      // Agar eski datada 'aiSettings' bo'lmasa, defaultni qo'shamiz
+      return {
+        ...defaultData, // Birinchi default qiymatlarni olamiz
+        ...parsedData,  // Ustidan eski datani yozamiz
+        aiSettings: {   // aiSettings ni alohida tekshiramiz
+          ...defaultData.aiSettings,
+          ...(parsedData.aiSettings || {}) // Agar eski datada aiSettings bo'lsa, uni olamiz
+        }
+      };
     }
   } catch (error) {
     console.error('Error loading data:', error);
@@ -49,21 +65,5 @@ export const saveData = (data: AppData): void => {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
   } catch (error) {
     console.error('Error saving data:', error);
-  }
-};
-
-export const exportData = (): string => {
-  const data = loadData();
-  return JSON.stringify(data, null, 2);
-};
-
-export const importData = (jsonString: string): boolean => {
-  try {
-    const data = JSON.parse(jsonString) as AppData;
-    saveData(data);
-    return true;
-  } catch (error) {
-    console.error('Error importing data:', error);
-    return false;
   }
 };
