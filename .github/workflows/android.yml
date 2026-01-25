@@ -1,4 +1,4 @@
-name: Build Android Fix
+name: Build Android Stable
 
 on:
   push:
@@ -16,38 +16,46 @@ jobs:
         with:
           node-version: 20
 
-      # Eski modullarni tozalab tashlash
-      - name: Clean Install
+      # 1. Toza o'rnatish (Dependencies)
+      - name: Install Dependencies
         run: |
           rm -rf node_modules
           rm -f package-lock.json
           npm install
+          # Capacitor CLI ni aniq o'rnatish
+          npm install -D @capacitor/cli@5.7.0 @capacitor/core@5.7.0
 
+      # 2. Veb qismini qurish
       - name: Build Web App
         run: npm run build
 
-      # Java versiyasini 21 ga o'zgartirdik!
-      - name: Setup Java 21
+      # 3. Java 17 ga qaytamiz (Gradle 8.0.2 uchun eng mos versiya)
+      - name: Setup Java 17
         uses: actions/setup-java@v4
         with:
-          distribution: 'temurin'
-          java-version: '21'
+          distribution: 'zulu'
+          java-version: '17'
 
+      # 4. Android Build (Tozalash bilan)
       - name: Build Android APK
         run: |
-          # Agar oldingi android papkasi bo'lsa o'chiramiz (toza boshlash uchun)
+          # Agar eski android papkasi bo'lsa, o'chirib tashlaymiz
           rm -rf android
           
-          # Platformani noldan yaratamiz
+          # Android papkasini yangidan yaratamiz
           npx cap add android
           npx cap sync
           
           cd android
+          
+          # Gradle ruxsatlarini to'g'irlash
           chmod +x ./gradlew
-          ./gradlew assembleDebug
+          
+          # Build qilish (xatolikni ko'rsatish rejimida)
+          ./gradlew assembleDebug --stacktrace
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
-          name: Hisobchi-AI-Fixed
+          name: Hisobchi-AI-Final
           path: android/app/build/outputs/apk/debug/app-debug.apk
