@@ -1,5 +1,6 @@
 import { useState } from 'react';
-import { Settings, Wallet, CreditCard, DollarSign, FileDown, Share2, Database, Brain, Sparkles, Trash2, ChevronRight, Plus, FolderOpen, Check } from 'lucide-react';
+// Importlar boshiga o'tkazildi
+import { Settings, Wallet, CreditCard, DollarSign, FileDown, Share2, Database, Brain, Sparkles, Trash2, ChevronRight, Plus, FolderOpen, Check, ChevronDown, X } from 'lucide-react';
 import { AppData, Wallet as WalletType, Currency, Category, TransactionType } from '../types';
 import { Filesystem, Directory, Encoding } from '@capacitor/filesystem';
 import { Share } from '@capacitor/share';
@@ -283,6 +284,3 @@ export default function SettingsPage({ data, onDataChange }: SettingsPageProps) 
     </div>
   );
 }
-
-// (ChevronDown import qilish esdan chiqibdi, tepadagi importlarga qo'shib qo'ydim)
-import { ChevronDown, X } from 'lucide-react';
