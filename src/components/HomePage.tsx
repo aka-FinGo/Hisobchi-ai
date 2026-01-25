@@ -8,129 +8,108 @@ interface HomePageProps {
 }
 
 export default function HomePage({ wallets, transactions, categories }: HomePageProps) {
-  const today = new Date();
-  const thisMonth = today.getMonth();
-  const thisYear = today.getFullYear();
+  const totalBalance = wallets.reduce((sum, wallet) => {
+    // Agar dollar bo'lsa kursni hisobga olish kerak (bu yerda soddalashtirilgan)
+    return sum + (wallet.currency === 'USD' ? wallet.balance * 12500 : wallet.balance);
+  }, 0);
 
-  const monthTransactions = transactions.filter((t) => {
-    const date = new Date(t.date);
-    return date.getMonth() === thisMonth && date.getFullYear() === thisYear;
-  });
-
-  const monthIncome = monthTransactions
-    .filter((t) => t.type === 'income')
-    .reduce((sum, t) => sum + t.amount, 0);
-
-  const monthExpense = monthTransactions
-    .filter((t) => t.type === 'expense')
-    .reduce((sum, t) => sum + t.amount, 0);
+  const getCategoryName = (categoryId: string) => categories.find((c) => c.id === categoryId)?.name || 'Noma\'lum';
+  const getWalletName = (walletId: string) => wallets.find((w) => w.id === walletId)?.name || 'Noma\'lum';
+  const getCategoryIcon = (categoryId: string) => categories.find((c) => c.id === categoryId)?.icon || 'Circle';
 
   const recentTransactions = [...transactions]
     .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
     .slice(0, 5);
 
-  const getCategoryName = (categoryId: string) => {
-    return categories.find((c) => c.id === categoryId)?.name || 'Noma\'lum';
-  };
-
-  const getWalletName = (walletId: string) => {
-    return wallets.find((w) => w.id === walletId)?.name || 'Noma\'lum';
-  };
-
-  const formatCurrency = (amount: number, currency: string) => {
-    if (currency === 'USD') {
-      return `$${amount.toLocaleString()}`;
-    }
-    return `${amount.toLocaleString()} so'm`;
-  };
-
   return (
-    <div className="flex-1 overflow-y-auto p-4 pb-24">
-      <h1 className="text-2xl font-bold text-white mb-6">Asosiy</h1>
-
-      <div className="mb-6">
-        <h2 className="text-sm text-gray-400 mb-3">Hamyonlar</h2>
-        <div className="space-y-3">
-          {wallets.map((wallet) => (
-            <div
-              key={wallet.id}
-              className="bg-gradient-to-br from-blue-600 to-blue-800 rounded-xl p-4"
-            >
-              <div className="flex items-center justify-between mb-2">
-                <div className="flex items-center gap-2">
-                  <WalletIcon size={20} className="text-white" />
-                  <span className="text-white font-medium">{wallet.name}</span>
-                </div>
-              </div>
-              <div className="text-2xl font-bold text-white">
-                {formatCurrency(wallet.balance, wallet.currency)}
-              </div>
-            </div>
-          ))}
-        </div>
-      </div>
-
-      <div className="mb-6">
-        <h2 className="text-sm text-gray-400 mb-3">Shu oy</h2>
-        <div className="grid grid-cols-2 gap-3">
-          <div className="bg-gray-800 rounded-xl p-4">
-            <div className="flex items-center gap-2 mb-2">
-              <TrendingUp size={20} className="text-green-500" />
-              <span className="text-gray-400 text-sm">Daromad</span>
-            </div>
-            <div className="text-xl font-bold text-white">
-              {monthIncome.toLocaleString()} so'm
+    <div className="p-4 space-y-6 pb-24 pt-safe">
+      {/* Glassmorphism Balance Card */}
+      <div className="relative bg-gradient-to-br from-blue-600 to-indigo-900 rounded-3xl p-6 text-white shadow-2xl overflow-hidden border border-white/10">
+        {/* Orqa fon effektlari */}
+        <div className="absolute top-0 right-0 -mr-8 -mt-8 w-32 h-32 bg-white/10 rounded-full blur-2xl"></div>
+        <div className="absolute bottom-0 left-0 -ml-8 -mb-8 w-32 h-32 bg-blue-400/20 rounded-full blur-2xl"></div>
+        
+        <div className="relative z-10">
+          <div className="flex justify-between items-start mb-2">
+            <span className="text-blue-200 text-sm font-medium">Umumiy balans</span>
+            <div className="bg-white/20 p-2 rounded-lg backdrop-blur-sm">
+              <WalletIcon size={20} className="text-white" />
             </div>
           </div>
-          <div className="bg-gray-800 rounded-xl p-4">
-            <div className="flex items-center gap-2 mb-2">
-              <TrendingDown size={20} className="text-red-500" />
-              <span className="text-gray-400 text-sm">Chiqim</span>
+          
+          <h1 className="text-4xl font-bold tracking-tight mb-6">
+            {totalBalance.toLocaleString()} <span className="text-lg font-normal text-blue-200">UZS</span>
+          </h1>
+
+          <div className="grid grid-cols-2 gap-3">
+            <div className="bg-black/20 rounded-xl p-3 backdrop-blur-sm flex items-center gap-3">
+              <div className="bg-green-500/20 p-2 rounded-full text-green-400">
+                <TrendingUp size={18} />
+              </div>
+              <div>
+                <p className="text-xs text-blue-200">Kirim</p>
+                <p className="font-semibold text-sm">Faol</p>
+              </div>
             </div>
-            <div className="text-xl font-bold text-white">
-              {monthExpense.toLocaleString()} so'm
+            <div className="bg-black/20 rounded-xl p-3 backdrop-blur-sm flex items-center gap-3">
+              <div className="bg-red-500/20 p-2 rounded-full text-red-400">
+                <TrendingDown size={18} />
+              </div>
+              <div>
+                <p className="text-xs text-blue-200">Chiqim</p>
+                <p className="font-semibold text-sm">Faol</p>
+              </div>
             </div>
           </div>
         </div>
       </div>
 
-      <div>
-        <h2 className="text-sm text-gray-400 mb-3">So'nggi tranzaksiyalar</h2>
-        {recentTransactions.length === 0 ? (
-          <div className="bg-gray-800 rounded-xl p-6 text-center">
-            <p className="text-gray-400">Hali tranzaksiya yo'q</p>
-            <p className="text-gray-500 text-sm mt-1">
-              + tugmasini bosib yangi tranzaksiya qo'shing
+      {/* Hamyonlar qatori */}
+      <div className="flex gap-3 overflow-x-auto pb-2 scrollbar-hide">
+        {wallets.map((wallet) => (
+          <div key={wallet.id} className="min-w-[140px] bg-gray-800 p-4 rounded-2xl border border-gray-700 flex flex-col justify-between">
+            <p className="text-gray-400 text-xs">{wallet.name}</p>
+            <p className="text-white font-bold mt-1">
+              {wallet.balance.toLocaleString()} <span className="text-xs font-normal">{wallet.currency}</span>
             </p>
           </div>
-        ) : (
-          <div className="space-y-2">
-            {recentTransactions.map((transaction) => (
-              <div
-                key={transaction.id}
-                className="bg-gray-800 rounded-xl p-4 flex items-center justify-between"
-              >
-                <div className="flex-1">
-                  <div className="text-white font-medium">
-                    {getCategoryName(transaction.categoryId)}
+        ))}
+      </div>
+
+      {/* So'nggi tranzaksiyalar */}
+      <div>
+        <h2 className="text-white font-semibold text-lg mb-3 px-1">So'nggi harakatlar</h2>
+        <div className="space-y-3">
+          {recentTransactions.length === 0 ? (
+            <div className="text-center py-8 text-gray-500 bg-gray-800/50 rounded-2xl border border-gray-700 border-dashed">
+              Hozircha tranzaksiyalar yo'q
+            </div>
+          ) : (
+            recentTransactions.map((t) => (
+              <div key={t.id} className="bg-gray-800/80 backdrop-blur-sm p-4 rounded-2xl border border-gray-700/50 flex items-center justify-between active:bg-gray-700 transition-colors">
+                <div className="flex items-center gap-4">
+                  {/* Kategoriya Ikonkasi (Dinamik bo'lishi mumkin) */}
+                  <div className={`w-12 h-12 rounded-full flex items-center justify-center ${
+                    t.type === 'income' ? 'bg-green-500/10 text-green-500' : 'bg-red-500/10 text-red-500'
+                  }`}>
+                    {t.type === 'income' ? <TrendingUp size={20} /> : <TrendingDown size={20} />}
                   </div>
-                  <div className="text-gray-400 text-sm">
-                    {getWalletName(transaction.walletId)} •{' '}
-                    {new Date(transaction.date).toLocaleDateString('uz-UZ')}
+                  
+                  <div>
+                    <p className="text-white font-medium">{getCategoryName(t.categoryId)}</p>
+                    <p className="text-xs text-gray-400 flex items-center gap-1">
+                      {getWalletName(t.walletId)} • {new Date(t.date).toLocaleDateString()}
+                    </p>
                   </div>
                 </div>
-                <div
-                  className={`text-lg font-bold ${
-                    transaction.type === 'income' ? 'text-green-500' : 'text-red-500'
-                  }`}
-                >
-                  {transaction.type === 'income' ? '+' : '-'}
-                  {transaction.amount.toLocaleString()}
-                </div>
+                
+                <span className={`font-bold ${t.type === 'income' ? 'text-green-400' : 'text-white'}`}>
+                  {t.type === 'income' ? '+' : '-'}{t.amount.toLocaleString()}
+                </span>
               </div>
-            ))}
-          </div>
-        )}
+            ))
+          )}
+        </div>
       </div>
     </div>
   );
