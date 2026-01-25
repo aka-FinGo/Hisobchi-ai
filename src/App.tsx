@@ -10,7 +10,6 @@ import AIPage from './components/AIPage';
 import SettingsPage from './components/SettingsPage';
 import TransactionModal from './components/TransactionModal';
 
-// Types va boshqa kodlar o'zgarishsiz qoladi
 type TabType = 'home' | 'history' | 'stats' | 'ai' | 'settings';
 
 function App() {
@@ -19,7 +18,7 @@ function App() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingTransaction, setEditingTransaction] = useState<Transaction | null>(null);
 
-  // Back button logikasi
+  // Android Back Button logikasi
   useEffect(() => {
     CapacitorApp.addListener('backButton', ({ canGoBack }) => {
       if (isModalOpen) {
@@ -32,97 +31,130 @@ function App() {
     });
   }, [isModalOpen, activeTab]);
 
-  useEffect(() => { saveData(data); }, [data]);
+  // Ma'lumotlar o'zgarganda saqlash
+  useEffect(() => {
+    saveData(data);
+  }, [data]);
 
-  const refreshData = () => { setData(loadData()); };
-
-  const handleSaveTransaction = (tData: any) => {
-    let newTxList = [...data.transactions];
-    let newWallets = [...data.wallets];
-
-    if (editingTransaction) {
-      const oldWallet = newWallets.find(w => w.id === editingTransaction.walletId);
-      if (oldWallet) {
-        oldWallet.balance -= (editingTransaction.type === 'income' ? editingTransaction.amount : -editingTransaction.amount);
-      }
-      newTxList = newTxList.filter(t => t.id !== editingTransaction.id);
-    }
-
-    const newTx: Transaction = {
+  const handleTransactionSave = (txData: any) => {
+    const newTx = {
+      ...txData,
       id: editingTransaction ? editingTransaction.id : Date.now().toString(),
-      ...tData
     };
 
-    const wallet = newWallets.find(w => w.id === tData.walletId);
-    if (wallet) {
-      wallet.balance += (tData.type === 'income' ? tData.amount : -tData.amount);
+    let updatedTransactions;
+    if (editingTransaction) {
+      updatedTransactions = data.transactions.map((t) =>
+        t.id === editingTransaction.id ? newTx : t
+      );
+    } else {
+      updatedTransactions = [...data.transactions, newTx];
     }
 
-    setData({ ...data, wallets: newWallets, transactions: [newTx, ...newTxList] });
+    // Balanslarni yangilash
+    const updatedWallets = data.wallets.map((w) => {
+      if (w.id === txData.walletId) {
+        const amountDiff = editingTransaction
+          ? newTx.amount - editingTransaction.amount // Tahrirlashdagi farq
+          : newTx.amount;
+        
+        const newBalance = txData.type === 'income' 
+          ? w.balance + amountDiff 
+          : w.balance - amountDiff;
+          
+        return { ...w, balance: newBalance };
+      }
+      return w;
+    });
+
+    setData({
+      ...data,
+      transactions: updatedTransactions,
+      wallets: updatedWallets,
+    });
     setIsModalOpen(false);
     setEditingTransaction(null);
   };
 
-  const handleDeleteTransaction = (id: string) => {
-    const tx = data.transactions.find(t => t.id === id);
+  const handleDelete = (id: string) => {
+    const tx = data.transactions.find((t) => t.id === id);
     if (!tx) return;
-    const newWallets = data.wallets.map(w => {
+
+    const updatedWallets = data.wallets.map((w) => {
       if (w.id === tx.walletId) {
-        const amount = tx.type === 'income' ? -tx.amount : tx.amount;
-        return { ...w, balance: w.balance + amount };
+        return {
+          ...w,
+          balance: tx.type === 'income' ? w.balance - tx.amount : w.balance + tx.amount,
+        };
       }
       return w;
     });
-    setData({ ...data, wallets: newWallets, transactions: data.transactions.filter(t => t.id !== id) });
-  };
 
-  const handleEditClick = (id: string) => {
-    const tx = data.transactions.find(t => t.id === id);
-    if (tx) {
-      setEditingTransaction(tx);
-      setIsModalOpen(true);
-    }
+    setData({
+      ...data,
+      transactions: data.transactions.filter((t) => t.id !== id),
+      wallets: updatedWallets,
+    });
   };
 
   return (
-    // ASOSIY O'ZGARISH SHU YERDA: Flex Layout
-    <div className="flex flex-col h-screen w-screen bg-gray-900 text-white font-sans overflow-hidden">
-      
-      {/* 1. SCROLL QISMI (CONTENT) */}
-      <div className="flex-1 overflow-y-auto scrollbar-hide w-full relative">
-        {activeTab === 'home' && <HomePage wallets={data.wallets} transactions={data.transactions} categories={data.categories} />}
-        {activeTab === 'history' && <HistoryPage transactions={data.transactions} categories={data.categories} wallets={data.wallets} onDelete={handleDeleteTransaction} onEdit={handleEditClick} />}
-        {activeTab === 'stats' && <StatsPage transactions={data.transactions} categories={data.categories} />} 
+    <div className="flex flex-col h-full bg-gray-900 text-white">
+      {/* Asosiy Kontent */}
+      <div className="flex-1 overflow-y-auto scrollbar-hide">
+        {activeTab === 'home' && (
+          <HomePage
+            wallets={data.wallets}
+            transactions={data.transactions}
+            categories={data.categories}
+          />
+        )}
+        {activeTab === 'history' && (
+          <HistoryPage
+            transactions={data.transactions}
+            categories={data.categories}
+            wallets={data.wallets}
+            onDelete={handleDelete}
+            onEdit={(id) => {
+              const tx = data.transactions.find((t) => t.id === id);
+              if (tx) {
+                setEditingTransaction(tx);
+                setIsModalOpen(true);
+              }
+            }}
+          />
+        )}
+        {activeTab === 'stats' && (
+          <StatsPage transactions={data.transactions} categories={data.categories} />
+        )}
         {activeTab === 'ai' && (
-  <AIPage 
-    data={data} // <-- YANGI: Butun ma'lumotlar bazasini beramiz
-    onAddTransaction={(tx) => {
-      const newTx = { ...tx, id: Date.now().toString() };
-      setData(prev => ({
-        ...prev,
-        transactions: [...prev.transactions, newTx]
-      }));
-      // Optional: Muvaffaqiyatli qo'shilganda vibratsiya yoki tovush
-    }} 
-  />
-)}
+          <AIPage 
+            data={data}
+            onAddTransaction={(tx) => handleTransactionSave(tx)}
+          />
+        )}
+        {activeTab === 'settings' && (
+          <SettingsPage
+            data={data}
+            onDataChange={() => setData(loadData())}
+          />
+        )}
+      </div>
 
-
-      {/* 2. MENU QISMI (QOTIRILGAN) */}
-      <div className="flex-none w-full bg-gray-900 border-t border-gray-800 z-50 pb-[env(safe-area-inset-bottom)]">
-        <div className="flex justify-around items-center h-16 px-2 relative">
+      {/* Pastki Navigatsiya (Bottom Bar) */}
+      <div className="bg-gray-900/95 backdrop-blur border-t border-gray-800 pb-safe pt-2 px-6 fixed bottom-0 left-0 right-0 z-50">
+        <div className="flex justify-between items-end pb-2">
           
           <button onClick={() => setActiveTab('home')} className={`flex-1 flex flex-col items-center py-2 ${activeTab === 'home' ? 'text-blue-500' : 'text-gray-500'}`}>
             <Home size={24} strokeWidth={activeTab === 'home' ? 2.5 : 2} />
             <span className="text-[10px] mt-1 font-medium">Asosiy</span>
           </button>
 
-          <button onClick={() => setActiveTab('history')} className={`flex-1 flex flex-col items-center py-2 ${activeTab === 'history' ? 'text-blue-500' : 'text-gray-500'}`}>
-            <History size={24} strokeWidth={activeTab === 'history' ? 2.5 : 2} />
-            <span className="text-[10px] mt-1 font-medium">Tarix</span>
+          <button onClick={() => setActiveTab('stats')} className={`flex-1 flex flex-col items-center py-2 ${activeTab === 'stats' ? 'text-blue-500' : 'text-gray-500'}`}>
+            <History size={24} strokeWidth={activeTab === 'stats' ? 2.5 : 2} />
+            <span className="text-[10px] mt-1 font-medium">Statistika</span>
           </button>
 
-          {/* KATTA TUGMA (Navbardan tashqariga chiqib turadi) */}
+          {/* O'rtadagi Katta Plyus Tugmasi */}
           <div className="relative -top-5">
             <button
               onClick={() => { setEditingTransaction(null); setIsModalOpen(true); }}
@@ -137,7 +169,13 @@ function App() {
             <span className="text-[10px] mt-1 font-medium">AI</span>
           </button>
 
-          <button onClick={() => setActiveTab('settings')} className={`flex-1 flex flex-col items-center py-2 ${activeTab === 'settings' ? 'text-blue-500' : 'text-gray-500'}`}>
+          <button onClick={() => setActiveTab('history')} className={`flex-1 flex flex-col items-center py-2 ${activeTab === 'history' ? 'text-blue-500' : 'text-gray-500'}`}>
+            <Settings size={24} strokeWidth={activeTab === 'history' ? 2.5 : 2} />
+            <span className="text-[10px] mt-1 font-medium">Tarix</span>
+          </button>
+          
+          {/* Sozlamalar History iconiga o'xshab qolgan ekan, to'g'irlab qo'ydim: Tarix -> HistoryPage, Sozlamalar -> SettingsPage */}
+           <button onClick={() => setActiveTab('settings')} className={`flex-1 flex flex-col items-center py-2 ${activeTab === 'settings' ? 'text-blue-500' : 'text-gray-500'}`}>
             <Settings size={24} strokeWidth={activeTab === 'settings' ? 2.5 : 2} />
             <span className="text-[10px] mt-1 font-medium">Sozlama</span>
           </button>
@@ -147,7 +185,7 @@ function App() {
       <TransactionModal
         isOpen={isModalOpen}
         onClose={() => { setIsModalOpen(false); setEditingTransaction(null); }}
-        onSave={handleSaveTransaction}
+        onSave={handleTransactionSave}
         categories={data.categories}
         wallets={data.wallets}
         initialData={editingTransaction}
