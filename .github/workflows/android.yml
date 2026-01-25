@@ -1,4 +1,4 @@
-name: Build Android Final
+name: Build Android Fix
 
 on:
   push:
@@ -16,34 +16,30 @@ jobs:
         with:
           node-version: 20
 
-      # 1. Barchasini tozalab, noldan o'rnatish
-      - name: Install Dependencies
+      # Eski modullarni tozalab tashlash
+      - name: Clean Install
         run: |
           rm -rf node_modules
           rm -f package-lock.json
           npm install
-          # Capacitor CLI ni majburan o'rnatamiz (Eng muhim joyi shu!)
-          npm install -D @capacitor/cli @capacitor/core
 
-      # 2. Veb qismini qurish
       - name: Build Web App
         run: npm run build
 
-      - name: Setup Java 17
+      # Java versiyasini 21 ga o'zgartirdik!
+      - name: Setup Java 21
         uses: actions/setup-java@v4
         with:
-          distribution: 'zulu'
-          java-version: '17'
+          distribution: 'temurin'
+          java-version: '21'
 
-      # 3. Android Build (Xatosiz variant)
       - name: Build Android APK
         run: |
-          # Agar android papkasi bo'lmasa, uni yaratish
-          if [ ! -d "android" ]; then
-            npx cap add android
-          fi
+          # Agar oldingi android papkasi bo'lsa o'chiramiz (toza boshlash uchun)
+          rm -rf android
           
-          # Endi cap buyrug'i 100% ishlaydi
+          # Platformani noldan yaratamiz
+          npx cap add android
           npx cap sync
           
           cd android
@@ -53,5 +49,5 @@ jobs:
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
-          name: Hisobchi-AI-Final
+          name: Hisobchi-AI-Fixed
           path: android/app/build/outputs/apk/debug/app-debug.apk
