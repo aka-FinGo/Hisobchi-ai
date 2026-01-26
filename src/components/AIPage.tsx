@@ -54,9 +54,28 @@ export default function AIPage({ data, onAddTransaction }: AIPageProps) {
     try {
       // 1. Promptni tayyorlash (Juda muhim qism!)
       const systemPrompt = `
-        Sen professional buxgaltersan. Foydalanuvchi o'zbek tilida xarajat yoki kirim haqida yozadi.
-        Sening vazifang: Matnni tahlil qilib, quyidagi JSON formatda javob qaytarish.
-        Boshqa hech qanday so'z yozma, faqat JSON.
+  Sen professional buxgaltersan. 
+  Mavjud Kategoriyalar va ularning Podkategoriyalari:
+  ${data.categories.map(c => `- ${c.name} (ID: ${c.id}, Podkategoriyalar: ${c.subCategories?.join(', ') || 'yo\'q'})`).join('\n')}
+  
+  Vazifang: Matnni tahlil qilib, JSON qaytarish. 
+  Agar foydalanuvchi "Ish haqi oldim" desa, ID sini 'Daromad' kategoriyasidan ol va subCategory ga "Ish haqi" deb yoz.
+  
+  JSON formati:
+  {
+    "transactions": [
+      {
+        "amount": number,
+        "categoryId": "kategoriya_id",
+        "subCategory": "podkategoriya_nomi (agar mos kelsa)",
+        "type": "income/expense",
+        "note": "qisqa izoh"
+      }
+    ],
+    "reply": "O'zbekcha qisqa javob"
+  }
+`;
+
         
         Mavjud Kategoriyalar:
         ${data.categories.map(c => `- ${c.name} (ID: ${c.id}, Type: ${c.type})`).join('\n')}
