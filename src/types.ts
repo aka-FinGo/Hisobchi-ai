@@ -1,5 +1,3 @@
-// src/types.ts
-
 export type TransactionType = 'income' | 'expense';
 export type Currency = 'UZS' | 'USD';
 
@@ -9,15 +7,15 @@ export interface Wallet {
   type: 'cash' | 'card' | 'dollar';
   balance: number;
   currency: Currency;
-  colorTheme?: string; // Kartaning rangi uchun (optional)
+  colorTheme?: string; // Kartaning rangi uchun
 }
 
 export interface Category {
   id: string;
   name: string;
-  icon: string; // Lucide icon nomi (string sifatida)
+  icon: string; // Lucide icon nomi
   type: TransactionType;
-  subCategories?: string[]; // YANGI: Podkategoriyalar ro'yxati (faqat nomlari)
+  subCategories?: string[]; // YANGI: Podkategoriyalar ro'yxati
 }
 
 export interface Transaction {
