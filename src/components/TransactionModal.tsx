@@ -88,7 +88,7 @@ export default function TransactionModal({
     <div className="fixed inset-0 z-50 flex items-end justify-center">
       <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={onClose}></div>
       
-      <div className={`relative w-full max-w-md bg-[#0f172a]/90 backdrop-blur-xl rounded-t-[40px] p-6 pb-safe border-t ${borderColor} shadow-2xl transition-all duration-300 overflow-y-auto max-h-[90vh] scrollbar-hide`}>
+      <div className={`relative w-full max-w-md bg-[#0f172a]/90 backdrop-blur-xl rounded-t-[40px] p-6 pb-safe border-t ${borderColor} shadow-2xl transition-all duration-300 overflow-y-auto max-h-[90vh] scrollbar-hide animate-slideUp`}>
         
         {/* Header & Tabs */}
         <div className="flex justify-between items-center mb-6">
@@ -178,7 +178,7 @@ export default function TransactionModal({
                 <div className={`absolute inset-0 bg-gradient-to-br ${wallet.colorTheme || 'from-gray-700 to-gray-900'} opacity-20 z-0`}></div>
                 <div className="relative z-10 flex justify-between items-start">
                   {wallet.type === 'dollar' ? <DollarSign size={16} className="text-white"/> : wallet.type === 'card' ? <CreditCard size={16} className="text-white"/> : <WalletIcon size={16} className="text-white"/>}
-                  {/* XATO SHU YERDA EDI. > belgisi qo'shildi */}
+                  {/* XATO TUZATILDI: > belgisi qo'yildi */}
                   {walletId === wallet.id && (
                     <div className={`w-4 h-4 rounded-full ${bgColor} flex items-center justify-center`}>
                       <Check size={10} className="text-white"/>
