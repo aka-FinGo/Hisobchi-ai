@@ -1,179 +1,134 @@
 import { useState } from 'react';
-import { Trash2, Edit2, Filter, Calendar, Search } from 'lucide-react';
+import { Trash2, Edit2, Search, Filter, Calendar, ChevronRight } from 'lucide-react';
 import { Transaction, Category, Wallet } from '../types';
+import * as Icons from 'lucide-react';
 
 interface HistoryPageProps {
   transactions: Transaction[];
   categories: Category[];
   wallets: Wallet[];
   onDelete: (id: string) => void;
-  onEdit: (id: string) => void; // Tahrirlash funksiyasi qo'shildi
+  onEdit: (id: string) => void;
 }
 
-export default function HistoryPage({
-  transactions,
-  categories,
-  wallets,
-  onDelete,
-  onEdit
-}: HistoryPageProps) {
+const DynamicIcon = ({ name, size = 18 }: { name: string; size?: number }) => {
+  const IconComponent = (Icons as any)[name] || Icons.HelpCircle;
+  return <IconComponent size={size} />;
+};
+
+export default function HistoryPage({ transactions, categories, wallets, onDelete, onEdit }: HistoryPageProps) {
   const [filter, setFilter] = useState<'all' | 'income' | 'expense'>('all');
   const [searchTerm, setSearchTerm] = useState('');
 
-  // Tranzaksiyalarni saralash
   const filteredTransactions = transactions
     .filter((t) => {
-      // 1. Kirim/Chiqim filtri
-      if (filter !== 'all' && t.type !== filter) return false;
+      const matchesFilter = filter === 'all' || t.type === filter;
+      const categoryName = categories.find(c => c.id === t.categoryId)?.name.toLowerCase() || '';
+      const matchesSearch = 
+        t.note?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        t.subCategory?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        categoryName.includes(searchTerm.toLowerCase()) ||
+        t.amount.toString().includes(searchTerm);
       
-      // 2. Qidiruv (Izoh, summa yoki podkategoriya bo'yicha)
-      if (searchTerm) {
-        const searchLower = searchTerm.toLowerCase();
-        const categoryName = categories.find(c => c.id === t.categoryId)?.name.toLowerCase() || '';
-        return (
-          t.note?.toLowerCase().includes(searchLower) ||
-          t.subCategory?.toLowerCase().includes(searchLower) ||
-          t.amount.toString().includes(searchLower) ||
-          categoryName.includes(searchLower)
-        );
-      }
-      return true;
+      return matchesFilter && matchesSearch;
     })
     .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
 
-  const getCategoryName = (categoryId: string) => 
-    categories.find((c) => c.id === categoryId)?.name || 'Noma\'lum';
-  
-  const getCategoryIcon = (categoryId: string) => 
-    categories.find((c) => c.id === categoryId)?.icon || '●';
-
-  const getWalletName = (walletId: string) => 
-    wallets.find((w) => w.id === walletId)?.name || 'Hamyon';
-
-  // Sanaga ko'ra guruhlash
-  const groupByDate = (transactions: Transaction[]) => {
-    const groups: { [key: string]: Transaction[] } = {};
-    transactions.forEach((t) => {
-      const date = new Date(t.date).toLocaleDateString('uz-UZ', {
-        year: 'numeric',
-        month: 'long',
-        day: 'numeric',
-      });
-      if (!groups[date]) groups[date] = [];
-      groups[date].push(t);
-    });
-    return groups;
-  };
-
-  const groupedTransactions = groupByDate(filteredTransactions);
+  // Tranzaksiyalarni sanalar bo'yicha guruhlash
+  const grouped = filteredTransactions.reduce((acc: any, t) => {
+    const date = t.date;
+    if (!acc[date]) acc[date] = [];
+    acc[date].push(t);
+    return acc;
+  }, {});
 
   return (
-    <div className="p-4 pb-24 pt-safe min-h-full">
-      {/* Header va Qidiruv */}
-      <div className="sticky top-0 bg-gray-900/95 backdrop-blur-sm z-10 pb-4 space-y-3">
-        <h1 className="text-2xl font-bold text-white">Tarix</h1>
+    <div className="h-full flex flex-col bg-gray-950">
+      {/* Search & Filters */}
+      <div className="pt-safe px-6 pb-4 bg-gray-900/40 backdrop-blur-xl border-b border-white/5">
+        <h2 className="text-2xl font-black text-white mt-4 mb-6 tracking-tight">Tarix</h2>
         
-        {/* Qidiruv maydoni */}
-        <div className="relative">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
-          <input 
-            type="text" 
-            placeholder="Qidirish: zakaz, summa, izoh..." 
+        <div className="relative mb-4">
+          <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500" size={18} />
+          <input
+            type="text"
+            placeholder="Qidiruv (masalan: bozor, 50000...)"
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full bg-gray-800 text-white pl-10 pr-4 py-3 rounded-xl border border-gray-700 focus:border-blue-500 outline-none text-sm"
+            className="w-full bg-white/5 border border-white/10 rounded-2xl py-3 pl-12 pr-4 text-white placeholder-gray-500 focus:outline-none focus:border-blue-500 transition-colors"
           />
         </div>
 
-        {/* Filtr tugmalari */}
-        <div className="flex bg-gray-800 p-1 rounded-xl">
-          {(['all', 'income', 'expense'] as const).map((type) => (
+        <div className="flex gap-2 p-1 bg-white/5 rounded-xl">
+          {(['all', 'income', 'expense'] as const).map((f) => (
             <button
-              key={type}
-              onClick={() => setFilter(type)}
-              className={`flex-1 py-2 text-sm font-medium rounded-lg transition-all ${
-                filter === type
-                  ? 'bg-blue-600 text-white shadow-lg'
-                  : 'text-gray-400 hover:text-white'
+              key={f}
+              onClick={() => setFilter(f)}
+              className={`flex-1 py-2 rounded-lg text-xs font-bold uppercase tracking-wider transition-all ${
+                filter === f ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/20' : 'text-gray-500'
               }`}
             >
-              {type === 'all' ? 'Barchasi' : type === 'income' ? 'Kirim' : 'Chiqim'}
+              {f === 'all' ? 'Hammasi' : f === 'income' ? 'Kirim' : 'Chiqim'}
             </button>
           ))}
         </div>
       </div>
 
-      {/* Ro'yxat */}
-      <div className="space-y-6 mt-2">
-        {Object.keys(groupedTransactions).length === 0 ? (
-          <div className="text-center text-gray-500 py-10">
-            <Filter size={48} className="mx-auto mb-3 opacity-20" />
-            <p>Hech narsa topilmadi</p>
+      {/* List */}
+      <div className="flex-1 overflow-y-auto p-6 pb-32 scrollbar-hide">
+        {Object.keys(grouped).length === 0 ? (
+          <div className="flex flex-col items-center justify-center h-64 text-gray-600">
+            <Calendar size={48} className="mb-4 opacity-20" />
+            <p>Ma'lumot topilmadi</p>
           </div>
         ) : (
-          Object.keys(groupedTransactions).map((date) => (
-            <div key={date}>
-              <h3 className="text-gray-400 text-xs font-medium uppercase tracking-wider mb-2 sticky top-32 bg-gray-900 py-1 w-fit px-2 rounded">
-                {date}
+          Object.keys(grouped).map((date) => (
+            <div key={date} className="mb-8">
+              <h3 className="text-gray-500 text-[10px] font-black uppercase tracking-[0.2em] mb-4 ml-2">
+                {new Date(date).toLocaleDateString('uz-UZ', { weekday: 'long', day: 'numeric', month: 'long' })}
               </h3>
-              <div className="space-y-2">
-                {groupedTransactions[date].map((t) => (
-                  <div key={t.id} className="bg-gray-800 rounded-xl p-3 flex items-center justify-between border border-gray-700/50">
-                    
-                    {/* Chap tomon: Info */}
-                    <div className="flex-1 min-w-0 mr-3">
-                      <div className="flex items-center gap-2">
-                        <span className="text-white font-medium truncate">
-                          {getCategoryName(t.categoryId)}
-                        </span>
-                        {/* Agar davr (period) bo'lsa ko'rsatish */}
-                        {t.period && t.period !== t.date.slice(0, 7) && (
-                          <span className="text-[10px] bg-blue-900/50 text-blue-300 px-1.5 py-0.5 rounded flex items-center gap-0.5">
-                            <Calendar size={8} /> {t.period}
-                          </span>
-                        )}
+              
+              <div className="space-y-3">
+                {grouped[date].map((t: Transaction) => {
+                  const cat = categories.find(c => c.id === t.categoryId);
+                  return (
+                    <div key={t.id} className="glass-card rounded-3xl p-4 flex items-center justify-between group">
+                      <div className="flex items-center gap-4">
+                        <div className={`w-11 h-11 rounded-2xl flex items-center justify-center ${
+                          t.type === 'income' ? 'bg-emerald-500/10 text-emerald-400' : 'bg-rose-500/10 text-rose-400'
+                        }`}>
+                          <DynamicIcon name={cat?.icon || 'Circle'} />
+                        </div>
+                        <div>
+                          <h4 className="text-white font-bold text-sm">
+                            {cat?.name} {t.subCategory && <span className="text-gray-500 font-normal">/ {t.subCategory}</span>}
+                          </h4>
+                          <p className="text-gray-500 text-[10px] font-medium mt-0.5 uppercase tracking-tighter">
+                            {wallets.find(w => w.id === t.walletId)?.name} • {t.note || 'Izohsiz'}
+                          </p>
+                        </div>
                       </div>
-                      
-                      <div className="text-gray-400 text-xs truncate flex flex-col">
-                        <span>{getWalletName(t.walletId)}</span>
-                        {/* Podkategoriya yoki Izoh */}
-                        {(t.subCategory || t.note) && (
-                          <span className="text-gray-500 italic">
-                            {t.subCategory ? `• ${t.subCategory} ` : ''}
-                            {t.note ? `(${t.note})` : ''}
-                          </span>
-                        )}
+
+                      <div className="flex items-center gap-4">
+                        <div className="text-right">
+                          <p className={`font-black text-sm ${t.type === 'income' ? 'text-emerald-400' : 'text-white'}`}>
+                            {t.type === 'income' ? '+' : '-'}{t.amount.toLocaleString()}
+                          </p>
+                        </div>
+                        
+                        {/* Actions (Hoverda yoki bosganda chiqadi) */}
+                        <div className="flex gap-1">
+                          <button onClick={() => onEdit(t.id)} className="p-2 text-blue-400 hover:bg-blue-500/10 rounded-lg transition-colors">
+                            <Edit2 size={14} />
+                          </button>
+                          <button onClick={() => {if(confirm('Ochirish?')) onDelete(t.id)}} className="p-2 text-rose-500 hover:bg-rose-500/10 rounded-lg transition-colors">
+                            <Trash2 size={14} />
+                          </button>
+                        </div>
                       </div>
                     </div>
-
-                    {/* O'ng tomon: Summa va Tugmalar */}
-                    <div className="flex items-center gap-3">
-                      <span className={`text-base font-bold whitespace-nowrap ${
-                        t.type === 'income' ? 'text-green-400' : 'text-white'
-                      }`}>
-                        {t.type === 'income' ? '+' : '-'}{t.amount.toLocaleString()}
-                      </span>
-
-                      {/* Tahrirlash Tugmasi */}
-                      <button 
-                        onClick={() => onEdit(t.id)}
-                        className="p-2 bg-gray-700/50 text-blue-400 rounded-lg active:bg-blue-600 active:text-white transition-colors"
-                      >
-                        <Edit2 size={16} />
-                      </button>
-
-                      {/* O'chirish Tugmasi */}
-                      <button
-                        onClick={() => {
-                          if(window.confirm("O'chirilsinmi?")) onDelete(t.id);
-                        }}
-                        className="p-2 bg-gray-700/50 text-red-400 rounded-lg active:bg-red-600 active:text-white transition-colors"
-                      >
-                        <Trash2 size={16} />
-                      </button>
-                    </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             </div>
           ))
