@@ -1,50 +1,50 @@
-import { User, Shield, Brain, Palette, PlusCircle, LayoutGrid } from 'lucide-react';
+import { User, Brain, LayoutGrid, Palette, Trash2, ChevronRight, Sparkles } from 'lucide-react';
 
-export default function ProfilePage({ data, onAction }: { data: AppData, onAction: (type: string) => void }) {
+export default function SettingsPage({ data, onAction }: any) {
+  // Safe check: Agar ma'lumot kelmasa, loading ko'rsatadi
+  if (!data || !data.profile) return <div className="p-10 text-center text-blue-400">Tizim yuklanmoqda...</div>;
+
   return (
-    <div className="p-6 pb-32 space-y-6 overflow-y-auto h-full scrollbar-hide">
-      <div className="text-center py-8">
-        <div className="w-24 h-24 mx-auto neon-border-blue rounded-3xl p-1 mb-4 shadow-[0_0_25px_rgba(0,242,255,0.3)]">
-          <img src={data.profile.avatar} className="rounded-2xl" alt="Profile" />
+    <div className="p-6 pb-32 space-y-8 overflow-y-auto h-full scrollbar-hide">
+      <div className="text-center py-6">
+        <div className="w-24 h-24 mx-auto rounded-[30px] p-1 bg-gradient-to-tr from-blue-500 to-purple-600 shadow-[0_0_30px_rgba(59,130,246,0.3)] mb-4">
+          <img src={data.profile.avatar} className="rounded-[26px] bg-gray-900" alt="Avatar" />
         </div>
-        <h3 className="text-xl font-black text-white italic">{data.profile.name}</h3>
-        <p className="text-xs text-blue-500 font-bold tracking-widest uppercase">Senior User / aka_FinGo</p>
+        <h2 className="text-2xl font-black italic neon-text-blue">{data.profile.name}</h2>
+        <p className="text-[10px] font-bold text-gray-500 uppercase tracking-[0.3em]">aka_FinGo PRO User</p>
       </div>
 
       <div className="space-y-4">
-        {/* Settings Groups */}
-        <section className="space-y-2">
-          <p className="text-[10px] text-gray-500 font-bold uppercase tracking-widest ml-2">Moliya va Tizim</p>
-          <div className="glass-neon rounded-3xl overflow-hidden">
-            <button onClick={() => onAction('edit-categories')} className="w-full p-4 flex items-center justify-between border-b border-white/5 active:bg-white/5">
-              <div className="flex items-center gap-4">
-                <LayoutGrid className="text-purple-500" size={20} />
-                <span className="text-sm font-bold">Kategoriyalar va Podkategoriyalar</span>
-              </div>
-              <ChevronRight size={18} className="text-gray-600" />
-            </button>
-            <button onClick={() => onAction('edit-ai')} className="w-full p-4 flex items-center justify-between active:bg-white/5">
-              <div className="flex items-center gap-4">
-                <Brain className="text-blue-500" size={20} />
-                <span className="text-sm font-bold">AI Page Sozlamalari (Gemini)</span>
-              </div>
-              <ChevronRight size={18} className="text-gray-600" />
-            </button>
-          </div>
-        </section>
+        <p className="text-[10px] font-black text-blue-500 uppercase tracking-widest ml-4">Asosiy Sozlamalar</p>
+        
+        <div className="glass-neon rounded-[32px] overflow-hidden">
+          <button onClick={() => onAction('edit-categories')} className="w-full p-5 flex items-center justify-between border-b border-white/5 active:bg-white/5">
+            <div className="flex items-center gap-4">
+              <div className="p-2 bg-purple-500/20 rounded-xl text-purple-400"><LayoutGrid size={20}/></div>
+              <span className="font-bold text-sm">Kategoriya va Podkategoriyalar</span>
+            </div>
+            <ChevronRight size={18} className="text-gray-600" />
+          </button>
 
-        <section className="space-y-2">
-          <p className="text-[10px] text-gray-500 font-bold uppercase tracking-widest ml-2">Dizayn va Rejim</p>
-          <div className="glass-neon rounded-3xl overflow-hidden">
-            <button onClick={() => onAction('edit-design')} className="w-full p-4 flex items-center justify-between border-b border-white/5 active:bg-white/5">
-              <div className="flex items-center gap-4">
-                <Palette className="text-pink-500" size={20} />
-                <span className="text-sm font-bold">Neon Dizayn Sozlamalari</span>
-              </div>
-              <div className="bg-blue-500/20 px-2 py-1 rounded text-[10px] text-blue-400 font-bold">PRO</div>
-            </button>
-          </div>
-        </section>
+          <button onClick={() => onAction('edit-ai')} className="w-full p-5 flex items-center justify-between active:bg-white/5">
+            <div className="flex items-center gap-4">
+              <div className="p-2 bg-blue-500/20 rounded-xl text-blue-400"><Brain size={20}/></div>
+              <span className="font-bold text-sm">AI Page Sozlamalari</span>
+            </div>
+            <ChevronRight size={18} className="text-gray-600" />
+          </button>
+        </div>
+
+        <p className="text-[10px] font-black text-blue-500 uppercase tracking-widest ml-4">Ilova Dizayni</p>
+        <div className="glass-neon rounded-[32px] p-5 flex items-center justify-between">
+            <div className="flex items-center gap-4">
+              <div className="p-2 bg-pink-500/20 rounded-xl text-pink-400"><Palette size={20}/></div>
+              <span className="font-bold text-sm text-gray-300">Neon Chiroqlar Rejimi</span>
+            </div>
+            <div className="w-12 h-6 bg-blue-600 rounded-full flex items-center px-1 shadow-[0_0_10px_#2563eb]">
+               <div className="w-4 h-4 bg-white rounded-full"></div>
+            </div>
+        </div>
       </div>
     </div>
   );
