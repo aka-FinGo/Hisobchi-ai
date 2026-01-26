@@ -6,60 +6,27 @@
   :root {
     --sat: env(safe-area-inset-top);
     --sab: env(safe-area-inset-bottom);
+    --neon-blue: #00f2ff;
+    --neon-purple: #bc13fe;
+    --neon-pink: #ff00de;
   }
 
-  html, body {
-    height: 100vh;
-    width: 100vw;
-    margin: 0;
-    padding: 0;
-    overflow: hidden;
-    /* Chuqur va professional fon */
-    background: radial-gradient(circle at 50% 0%, #1e293b 0%, #0f172a 50%, #020617 100%);
-    color: white;
-    font-family: 'Plus Jakarta Sans', sans-serif;
-    -webkit-tap-highlight-color: transparent;
-  }
-
-  #root {
-    height: 100%;
-    width: 100%;
-    display: flex;
-    flex-direction: column;
+  body {
+    background: radial-gradient(circle at 50% 0%, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+    @apply text-white overflow-hidden h-screen;
   }
 }
 
 @layer components {
-  /* Glassmorphism effekti */
-  .glass-card {
-    @apply bg-white/5 backdrop-blur-xl border border-white/10 shadow-2xl;
-  }
+  .neon-border-blue { border: 1px solid var(--neon-blue); box-shadow: 0 0 10px var(--neon-blue); }
+  .neon-border-purple { border: 1px solid var(--neon-purple); box-shadow: 0 0 10px var(--neon-purple); }
   
-  .glass-panel {
-    @apply bg-[#0f172a]/80 backdrop-blur-md border-t border-white/5;
+  .glass-neon {
+    @apply bg-white/5 backdrop-blur-2xl border border-white/10 shadow-[0_0_20px_rgba(0,0,0,0.5)];
   }
 
-  /* Chiroyli matn gradienti */
-  .text-gradient {
-    @apply bg-clip-text text-transparent bg-gradient-to-r from-blue-400 to-purple-400;
-  }
+  .neon-text-blue { text-shadow: 0 0 8px var(--neon-blue); }
+  .neon-text-purple { text-shadow: 0 0 8px var(--neon-purple); }
 }
 
-/* Scrollbar yashirish */
-.scrollbar-hide::-webkit-scrollbar {
-    display: none;
-}
-.scrollbar-hide {
-    -ms-overflow-style: none;
-    scrollbar-width: none;
-}
-
-/* Animatsiyalar */
-@keyframes slideUp {
-  from { transform: translateY(100%); }
-  to { transform: translateY(0); }
-}
-
-.animate-slideUp {
-  animation: slideUp 0.4s cubic-bezier(0.16, 1, 0.3, 1);
-}
+.scrollbar-hide::-webkit-scrollbar { display: none; }
