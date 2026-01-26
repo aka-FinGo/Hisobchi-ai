@@ -14,7 +14,7 @@
     margin: 0;
     padding: 0;
     overflow: hidden;
-    /* YANGI: Zerikarli gray-900 o'rniga chuqur gradient */
+    /* Chuqur va professional fon */
     background: radial-gradient(circle at 50% 0%, #1e293b 0%, #0f172a 50%, #020617 100%);
     color: white;
     font-family: 'Plus Jakarta Sans', sans-serif;
@@ -29,6 +29,22 @@
   }
 }
 
+@layer components {
+  /* Glassmorphism effekti */
+  .glass-card {
+    @apply bg-white/5 backdrop-blur-xl border border-white/10 shadow-2xl;
+  }
+  
+  .glass-panel {
+    @apply bg-[#0f172a]/80 backdrop-blur-md border-t border-white/5;
+  }
+
+  /* Chiroyli matn gradienti */
+  .text-gradient {
+    @apply bg-clip-text text-transparent bg-gradient-to-r from-blue-400 to-purple-400;
+  }
+}
+
 /* Scrollbar yashirish */
 .scrollbar-hide::-webkit-scrollbar {
     display: none;
@@ -38,15 +54,12 @@
     scrollbar-width: none;
 }
 
-/* YANGI: Glassmorphism effektlari uchun utility klasslar */
-@layer components {
-  .glass-card {
-    @apply bg-white/5 backdrop-blur-xl border border-white/10 shadow-xl;
-  }
-  .glass-panel {
-    @apply bg-[#0f172a]/80 backdrop-blur-md border-t border-white/5;
-  }
-  .text-gradient {
-    @apply bg-clip-text text-transparent bg-gradient-to-r from-blue-400 to-purple-400;
-  }
+/* Animatsiyalar */
+@keyframes slideUp {
+  from { transform: translateY(100%); }
+  to { transform: translateY(0); }
+}
+
+.animate-slideUp {
+  animation: slideUp 0.4s cubic-bezier(0.16, 1, 0.3, 1);
 }
