@@ -4,29 +4,22 @@
 
 @layer base {
   :root {
-    --sat: env(safe-area-inset-top);
-    --sab: env(safe-area-inset-bottom);
     --neon-blue: #00f2ff;
     --neon-purple: #bc13fe;
     --neon-pink: #ff00de;
   }
-
   body {
-    background: radial-gradient(circle at 50% 0%, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
-    @apply text-white overflow-hidden h-screen;
+    background: radial-gradient(circle at 50% 0%, #1a1a2e 0%, #0f172a 50%, #020617 100%);
+    @apply text-white overflow-hidden h-screen font-['Plus_Jakarta_Sans'];
   }
 }
 
 @layer components {
-  .neon-border-blue { border: 1px solid var(--neon-blue); box-shadow: 0 0 10px var(--neon-blue); }
-  .neon-border-purple { border: 1px solid var(--neon-purple); box-shadow: 0 0 10px var(--neon-purple); }
-  
   .glass-neon {
     @apply bg-white/5 backdrop-blur-2xl border border-white/10 shadow-[0_0_20px_rgba(0,0,0,0.5)];
   }
-
-  .neon-text-blue { text-shadow: 0 0 8px var(--neon-blue); }
-  .neon-text-purple { text-shadow: 0 0 8px var(--neon-purple); }
+  .neon-text-blue { text-shadow: 0 0 10px var(--neon-blue); }
+  .neon-btn-purple { 
+    @apply bg-gradient-to-r from-[#bc13fe] to-[#ff00de] shadow-[0_0_15px_rgba(188,19,254,0.5)] active:scale-95 transition-all;
+  }
 }
-
-.scrollbar-hide::-webkit-scrollbar { display: none; }
