@@ -8,18 +8,33 @@ import { AppData, Transaction } from './types';
 import HomePage from './components/HomePage';
 import StatsPage from './components/StatsPage';
 import AIPage from './components/AIPage';
-import ProfilePage from './components/SettingsPage'; // Profil va Sozlamalar hubi
+import ProfilePage from './components/SettingsPage';
 import TransactionModal from './components/TransactionModal';
 
 type TabType = 'home' | 'stats' | 'ai' | 'profile';
 
+// --- MUHIM QISM: ESKI MA'LUMOTLARNI TOZALASH ---
+// Agar oq ekran bo'layotgan bo'lsa, shu qator eski, buzilgan ma'lumotlarni o'chiradi
+// va dastur yangi neon dizayn bilan noldan boshlanadi.
+try {
+  const testData = loadData();
+  if (!testData.profile || !testData.profile.theme) {
+    console.log("Eski ma'lumotlar aniqlandi. Tozalanmoqda...");
+    localStorage.clear();
+  }
+} catch (e) {
+  localStorage.clear();
+}
+// -------------------------------------------
+
 function App() {
+  // Endi yangi, toza ma'lumotlar yuklanadi
   const [data, setData] = useState<AppData>(loadData());
   const [activeTab, setActiveTab] = useState<TabType>('home');
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingTransaction, setEditingTransaction] = useState<Transaction | null>(null);
 
-  // 1. Android/Capacitor Back Button Logikasi
+  // Android Back Button
   useEffect(() => {
     CapacitorApp.addListener('backButton', ({ canGoBack }) => {
       if (isModalOpen) {
@@ -32,12 +47,11 @@ function App() {
     });
   }, [isModalOpen, activeTab]);
 
-  // 2. Ma'lumotlar o'zgarganda saqlash (Auto-save)
+  // Auto-save
   useEffect(() => {
     saveData(data);
   }, [data]);
 
-  // 3. Tranzaksiyani Saqlash / Tahrirlash
   const handleTransactionSave = (txData: any) => {
     const newTx = {
       ...txData,
@@ -53,7 +67,6 @@ function App() {
       updatedTransactions = [...data.transactions, newTx];
     }
 
-    // Balansni yangilash logikasi
     const updatedWallets = data.wallets.map((w) => {
       if (w.id === txData.walletId) {
         const amountDiff = editingTransaction
@@ -78,31 +91,19 @@ function App() {
     setEditingTransaction(null);
   };
 
-  // 4. Profil Hub buyruqlarini boshqarish (Action Manager)
   const handleProfileAction = (actionType: string) => {
-    switch (actionType) {
-      case 'edit-categories':
-        // Bu yerda kategoriya tahrirlash panelini ochishing mumkin
-        console.log("Kategoriyalar ochildi");
-        break;
-      case 'edit-ai':
-        console.log("AI sozlamalari ochildi");
-        break;
-      case 'reset-data':
-        if(confirm("DIQQAT! Barcha ma'lumotlar o'chiriladi. Rozimisiz?")) {
-           localStorage.clear();
-           window.location.reload();
-        }
-        break;
-      default:
-        break;
-    }
+    console.log("Profil harakati:", actionType);
+    // Keyinchalik bu yerga modal ochish kodlarini qo'shamiz
   };
 
+  // Agar ma'lumot yuklanmasa, oq ekran o'rniga xabar chiqaramiz
+  if (!data.profile) {
+    return <div className="flex items-center justify-center h-screen bg-[#0f172a] text-blue-400">Tizim qayta ishga tushmoqda...</div>;
+  }
+
   return (
-    <div className="flex flex-col h-full bg-transparent">
+    <div className="flex flex-col h-full bg-transparent font-['Plus_Jakarta_Sans']">
       
-      {/* Sahifalar (Tab Router) */}
       <div className="flex-1 overflow-hidden relative">
         {activeTab === 'home' && <HomePage data={data} />}
         {activeTab === 'stats' && <StatsPage data={data} />}
@@ -120,56 +121,50 @@ function App() {
       <div className="fixed bottom-6 left-6 right-6 z-50">
         <div className="glass-neon rounded-[30px] p-2 flex justify-between items-center relative">
           
-          {/* Home */}
           <button 
             onClick={() => setActiveTab('home')} 
-            className={`flex-1 flex flex-col items-center py-2 transition-all duration-300 ${activeTab === 'home' ? 'text-[#00f2ff] translate-y-[-5px]' : 'text-gray-500'}`}
+            className={`flex-1 flex flex-col items-center py-2 transition-all duration-300 ${activeTab === 'home' ? 'neon-text-blue translate-y-[-5px]' : 'text-gray-500'}`}
           >
-            <Home size={22} className={activeTab === 'home' ? 'neon-text-blue' : ''} />
-            <span className="text-[9px] mt-1 font-bold uppercase tracking-widest">Main</span>
+            <Home size={22} />
+            <span className="text-[9px] mt-1 font-bold uppercase tracking-widest">Asosiy</span>
           </button>
 
-          {/* Stats */}
           <button 
             onClick={() => setActiveTab('stats')} 
-            className={`flex-1 flex flex-col items-center py-2 transition-all duration-300 ${activeTab === 'stats' ? 'text-[#bc13fe] translate-y-[-5px]' : 'text-gray-500'}`}
+            className={`flex-1 flex flex-col items-center py-2 transition-all duration-300 ${activeTab === 'stats' ? 'neon-text-purple translate-y-[-5px]' : 'text-gray-500'}`}
           >
-            <BarChart2 size={22} className={activeTab === 'stats' ? 'neon-text-purple' : ''} />
-            <span className="text-[9px] mt-1 font-bold uppercase tracking-widest">Stats</span>
+            <BarChart2 size={22} />
+            <span className="text-[9px] mt-1 font-bold uppercase tracking-widest">Stat</span>
           </button>
 
-          {/* Center Plus Button (Neon Portal) */}
           <div className="relative -top-8 px-2">
             <button
               onClick={() => { setEditingTransaction(null); setIsModalOpen(true); }}
-              className="w-16 h-16 bg-gradient-to-br from-[#bc13fe] to-[#ff00de] text-white rounded-2xl flex items-center justify-center shadow-[0_0_20px_rgba(188,19,254,0.6)] border-4 border-[#0f172a] active:scale-90 transition-transform"
+              className="w-16 h-16 neon-btn-primary rounded-2xl flex items-center justify-center border-4 border-[#0f172a]"
             >
               <Plus size={32} strokeWidth={3} />
             </button>
           </div>
 
-          {/* AI Page */}
           <button 
             onClick={() => setActiveTab('ai')} 
-            className={`flex-1 flex flex-col items-center py-2 transition-all duration-300 ${activeTab === 'ai' ? 'text-[#00f2ff] translate-y-[-5px]' : 'text-gray-500'}`}
+            className={`flex-1 flex flex-col items-center py-2 transition-all duration-300 ${activeTab === 'ai' ? 'neon-text-blue translate-y-[-5px]' : 'text-gray-500'}`}
           >
-            <Sparkles size={22} className={activeTab === 'ai' ? 'neon-text-blue' : ''} />
-            <span className="text-[9px] mt-1 font-bold uppercase tracking-widest">AI Hub</span>
+            <Sparkles size={22} />
+            <span className="text-[9px] mt-1 font-bold uppercase tracking-widest">AI</span>
           </button>
 
-          {/* Profile Hub */}
           <button 
             onClick={() => setActiveTab('profile')} 
-            className={`flex-1 flex flex-col items-center py-2 transition-all duration-300 ${activeTab === 'profile' ? 'text-[#00f2ff] translate-y-[-5px]' : 'text-gray-500'}`}
+            className={`flex-1 flex flex-col items-center py-2 transition-all duration-300 ${activeTab === 'profile' ? 'neon-text-blue translate-y-[-5px]' : 'text-gray-500'}`}
           >
-            <User size={22} className={activeTab === 'profile' ? 'neon-text-blue' : ''} />
-            <span className="text-[9px] mt-1 font-bold uppercase tracking-widest">Profile</span>
+            <User size={22} />
+            <span className="text-[9px] mt-1 font-bold uppercase tracking-widest">Profil</span>
           </button>
 
         </div>
       </div>
 
-      {/* Modallar */}
       <TransactionModal
         isOpen={isModalOpen}
         onClose={() => { setIsModalOpen(false); setEditingTransaction(null); }}
