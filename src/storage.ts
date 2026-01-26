@@ -1,33 +1,31 @@
 import { AppData, Category, Wallet } from './types';
 
-// Kalitni o'zgartirdik, shunda eski ma'lumotlar xalaqit bermaydi va yangi struktura yuklanadi
-const STORAGE_KEY = 'finance_app_data_v2'; 
+// Baza kalitini yangilaymiz: 'cyber_v1'
+const STORAGE_KEY = 'hisobchi_cyber_v1';
 
 const defaultCategories: Category[] = [
-  // Xarajatlar
-  { id: 'c1', name: 'Oziq-ovqat', icon: 'ShoppingCart', type: 'expense', subCategories: ['Bozorlik', 'Tushlik', 'Fast Food', 'Suv'] },
-  { id: 'c2', name: 'Transport', icon: 'Car', type: 'expense', subCategories: ['Taksi', 'Avtobus', 'Benzin'] },
-  { id: 'c3', name: 'Uy-joy', icon: 'Home', type: 'expense', subCategories: ['Kommunal', 'Ijara', 'Ta\'mir'] },
-  { id: 'c4', name: 'Salomatlik', icon: 'Heart', type: 'expense', subCategories: ['Dori-darmon', 'Vrach'] },
-  { id: 'c5', name: 'O\'yin-kulgi', icon: 'Gamepad2', type: 'expense', subCategories: ['Kino', 'Kafe'] },
-  { id: 'c6', name: 'Kiyim-kechak', icon: 'ShoppingBag', type: 'expense' },
-  { id: 'c7', name: 'Ta\'lim', icon: 'BookOpen', type: 'expense', subCategories: ['Kurslar', 'Kitoblar'] },
-  // Kirimlar
-  { id: 'c9', name: 'Daromad', icon: 'Briefcase', type: 'income', subCategories: ['Ish haqi', 'Avans', 'Bonus', 'Freelance'] },
-  { id: 'c10', name: 'Biznes', icon: 'TrendingUp', type: 'income' },
-  { id: 'c11', name: 'Sovg\'a', icon: 'Gift', type: 'income' },
+  { id: 'c1', name: 'Oziq-ovqat', icon: 'ShoppingCart', type: 'expense', subCategories: ['Bozor', 'Kafe', 'Shirinliklar'] },
+  { id: 'c2', name: 'Transport', icon: 'Car', type: 'expense', subCategories: ['Taksi', 'Benzin', 'Avtobus'] },
+  { id: 'c3', name: 'Uy-joy', icon: 'Home', type: 'expense', subCategories: ['Kommunal', 'Ijara'] },
+  { id: 'c9', name: 'Daromad', icon: 'Briefcase', type: 'income', subCategories: ['Ish haqi', 'Bonus', 'Freelance'] },
 ];
 
 const defaultWallets: Wallet[] = [
-  { id: 'w1', name: 'Naqd pul', type: 'cash', balance: 0, currency: 'UZS', colorTheme: 'from-emerald-500 to-teal-600' },
-  { id: 'w2', name: 'Plastik karta', type: 'card', balance: 0, currency: 'UZS', colorTheme: 'from-blue-600 to-purple-600' },
-  { id: 'w3', name: 'Dollar', type: 'dollar', balance: 0, currency: 'USD', colorTheme: 'from-orange-500 to-red-500' },
+  { id: 'w1', name: 'Asosiy Hamyon', type: 'card', balance: 0, currency: 'UZS', colorTheme: 'from-blue-600 to-indigo-600' },
+  { id: 'w2', name: 'Naqd Pul', type: 'cash', balance: 0, currency: 'UZS', colorTheme: 'from-emerald-500 to-teal-600' },
 ];
 
 const defaultData: AppData = {
+  profile: {
+    name: 'Foydalanuvchi',
+    avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Felix',
+    currency: 'UZS',
+    theme: 'cyber'
+  },
   wallets: defaultWallets,
   transactions: [],
   categories: defaultCategories,
+  budgets: [],
   aiSettings: {
     provider: 'gemini',
     apiKey: '',
@@ -41,17 +39,18 @@ export const loadData = (): AppData => {
   try {
     const stored = localStorage.getItem(STORAGE_KEY);
     if (stored) {
-      const parsedData = JSON.parse(stored);
-      // Eski versiyadan o'tishda xatolik bo'lmasligi uchun tekshiruv
+      const parsed = JSON.parse(stored);
+      // Agar bazada profile yoki boshqa qismlar bo'lmasa, default'dan olamiz
       return {
         ...defaultData,
-        ...parsedData,
-        categories: parsedData.categories || defaultCategories,
+        ...parsed,
+        profile: parsed.profile || defaultData.profile,
+        budgets: parsed.budgets || defaultData.budgets,
+        aiSettings: parsed.aiSettings || defaultData.aiSettings
       };
     }
   } catch (error) {
-    console.error('Error loading data:', error);
-    localStorage.removeItem(STORAGE_KEY); // Agar data buzilgan bo'lsa, tozalab yuboramiz
+    console.error('Data load error:', error);
   }
   return defaultData;
 };
@@ -60,6 +59,6 @@ export const saveData = (data: AppData): void => {
   try {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
   } catch (error) {
-    console.error('Error saving data:', error);
+    console.error('Data save error:', error);
   }
 };
