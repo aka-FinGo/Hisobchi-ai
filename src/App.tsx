@@ -1,16 +1,17 @@
 import { useState, useEffect } from 'react';
 import { App as CapacitorApp } from '@capacitor/app';
-import { Home, History, Plus, Sparkles, Settings } from 'lucide-react';
+import { Home, BarChart2, Plus, Sparkles, User } from 'lucide-react';
 import { loadData, saveData } from './storage';
 import { AppData, Transaction } from './types';
+
+// Komponentlarni import qilish
 import HomePage from './components/HomePage';
-import HistoryPage from './components/HistoryPage';
 import StatsPage from './components/StatsPage';
 import AIPage from './components/AIPage';
-import SettingsPage from './components/SettingsPage';
+import ProfilePage from './components/SettingsPage'; // Profil va Sozlamalar hubi
 import TransactionModal from './components/TransactionModal';
 
-type TabType = 'home' | 'history' | 'stats' | 'ai' | 'settings';
+type TabType = 'home' | 'stats' | 'ai' | 'profile';
 
 function App() {
   const [data, setData] = useState<AppData>(loadData());
@@ -18,7 +19,7 @@ function App() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingTransaction, setEditingTransaction] = useState<Transaction | null>(null);
 
-  // Android Back Button logikasi
+  // 1. Android/Capacitor Back Button Logikasi
   useEffect(() => {
     CapacitorApp.addListener('backButton', ({ canGoBack }) => {
       if (isModalOpen) {
@@ -31,11 +32,12 @@ function App() {
     });
   }, [isModalOpen, activeTab]);
 
-  // Ma'lumotlar o'zgarganda saqlash
+  // 2. Ma'lumotlar o'zgarganda saqlash (Auto-save)
   useEffect(() => {
     saveData(data);
   }, [data]);
 
+  // 3. Tranzaksiyani Saqlash / Tahrirlash
   const handleTransactionSave = (txData: any) => {
     const newTx = {
       ...txData,
@@ -51,11 +53,11 @@ function App() {
       updatedTransactions = [...data.transactions, newTx];
     }
 
-    // Balanslarni yangilash
+    // Balansni yangilash logikasi
     const updatedWallets = data.wallets.map((w) => {
       if (w.id === txData.walletId) {
         const amountDiff = editingTransaction
-          ? newTx.amount - editingTransaction.amount // Tahrirlashdagi farq
+          ? newTx.amount - editingTransaction.amount
           : newTx.amount;
         
         const newBalance = txData.type === 'income' 
@@ -76,101 +78,98 @@ function App() {
     setEditingTransaction(null);
   };
 
-  const handleDelete = (id: string) => {
-    const tx = data.transactions.find((t) => t.id === id);
-    if (!tx) return;
-
-    const updatedWallets = data.wallets.map((w) => {
-      if (w.id === tx.walletId) {
-        return {
-          ...w,
-          balance: tx.type === 'income' ? w.balance - tx.amount : w.balance + tx.amount,
-        };
-      }
-      return w;
-    });
-
-    setData({
-      ...data,
-      transactions: data.transactions.filter((t) => t.id !== id),
-      wallets: updatedWallets,
-    });
+  // 4. Profil Hub buyruqlarini boshqarish (Action Manager)
+  const handleProfileAction = (actionType: string) => {
+    switch (actionType) {
+      case 'edit-categories':
+        // Bu yerda kategoriya tahrirlash panelini ochishing mumkin
+        console.log("Kategoriyalar ochildi");
+        break;
+      case 'edit-ai':
+        console.log("AI sozlamalari ochildi");
+        break;
+      case 'reset-data':
+        if(confirm("DIQQAT! Barcha ma'lumotlar o'chiriladi. Rozimisiz?")) {
+           localStorage.clear();
+           window.location.reload();
+        }
+        break;
+      default:
+        break;
+    }
   };
 
   return (
-    <div className="flex flex-col h-full bg-gray-900 text-white">
-      {/* Asosiy Kontent */}
-      <div className="flex-1 overflow-y-auto scrollbar-hide">
-        {activeTab === 'home' && (
-          <HomePage
-            wallets={data.wallets}
-            transactions={data.transactions}
-            categories={data.categories}
-          />
-        )}
-        {activeTab === 'history' && (
-          <HistoryPage
-            transactions={data.transactions}
-            categories={data.categories}
-            wallets={data.wallets}
-            onDelete={handleDelete}
-            onEdit={(id) => {
-              const tx = data.transactions.find((t) => t.id === id);
-              if (tx) {
-                setEditingTransaction(tx);
-                setIsModalOpen(true);
-              }
-            }}
-          />
-        )}
-        {activeTab === 'stats' && (
-          <StatsPage transactions={data.transactions} categories={data.categories} />
-        )}
-        {activeTab === 'ai' && (
-          <AIPage 
-            data={data}
-            onAddTransaction={(tx) => handleTransactionSave(tx)}
-          />
-        )}
-        {activeTab === 'settings' && (
-          <SettingsPage
-            data={data}
+    <div className="flex flex-col h-full bg-transparent">
+      
+      {/* Sahifalar (Tab Router) */}
+      <div className="flex-1 overflow-hidden relative">
+        {activeTab === 'home' && <HomePage data={data} />}
+        {activeTab === 'stats' && <StatsPage data={data} />}
+        {activeTab === 'ai' && <AIPage data={data} onAddTransaction={handleTransactionSave} />}
+        {activeTab === 'profile' && (
+          <ProfilePage 
+            data={data} 
             onDataChange={() => setData(loadData())}
+            onAction={handleProfileAction} 
           />
         )}
       </div>
 
-            {/* YANGI: Floating Bottom Navbar (Suzib yuruvchi menyu) */}
+      {/* --- CYBER NEON BOTTOM BAR --- */}
       <div className="fixed bottom-6 left-6 right-6 z-50">
-        <div className="glass-card rounded-3xl p-2 px-6 flex justify-between items-center shadow-2xl shadow-black/50">
+        <div className="glass-neon rounded-[30px] p-2 flex justify-between items-center relative">
           
-          <button onClick={() => setActiveTab('home')} className={`p-3 rounded-2xl transition-all duration-300 ${activeTab === 'home' ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/40 translate-y-[-10px]' : 'text-gray-400 hover:text-white'}`}>
-            <Home size={22} />
-          </button>
-
-          <button onClick={() => setActiveTab('stats')} className={`p-3 rounded-2xl transition-all duration-300 ${activeTab === 'stats' ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/40 translate-y-[-10px]' : 'text-gray-400 hover:text-white'}`}>
-            <History size={22} />
-          </button>
-
-          {/* Markaziy AI/Plus tugmasi */}
-          <button
-            onClick={() => { setEditingTransaction(null); setIsModalOpen(true); }}
-            className="w-14 h-14 bg-gradient-to-r from-pink-500 to-rose-500 rounded-full text-white flex items-center justify-center shadow-lg shadow-rose-500/40 transform -translate-y-6 border-[6px] border-[#0f172a] active:scale-90 transition-transform"
+          {/* Home */}
+          <button 
+            onClick={() => setActiveTab('home')} 
+            className={`flex-1 flex flex-col items-center py-2 transition-all duration-300 ${activeTab === 'home' ? 'text-[#00f2ff] translate-y-[-5px]' : 'text-gray-500'}`}
           >
-            <Plus size={28} strokeWidth={3} />
+            <Home size={22} className={activeTab === 'home' ? 'neon-text-blue' : ''} />
+            <span className="text-[9px] mt-1 font-bold uppercase tracking-widest">Main</span>
           </button>
 
-          <button onClick={() => setActiveTab('ai')} className={`p-3 rounded-2xl transition-all duration-300 ${activeTab === 'ai' ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/40 translate-y-[-10px]' : 'text-gray-400 hover:text-white'}`}>
-            <Sparkles size={22} />
+          {/* Stats */}
+          <button 
+            onClick={() => setActiveTab('stats')} 
+            className={`flex-1 flex flex-col items-center py-2 transition-all duration-300 ${activeTab === 'stats' ? 'text-[#bc13fe] translate-y-[-5px]' : 'text-gray-500'}`}
+          >
+            <BarChart2 size={22} className={activeTab === 'stats' ? 'neon-text-purple' : ''} />
+            <span className="text-[9px] mt-1 font-bold uppercase tracking-widest">Stats</span>
           </button>
-          
-          <button onClick={() => setActiveTab('settings')} className={`p-3 rounded-2xl transition-all duration-300 ${activeTab === 'settings' ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/40 translate-y-[-10px]' : 'text-gray-400 hover:text-white'}`}>
-            <Settings size={22} />
+
+          {/* Center Plus Button (Neon Portal) */}
+          <div className="relative -top-8 px-2">
+            <button
+              onClick={() => { setEditingTransaction(null); setIsModalOpen(true); }}
+              className="w-16 h-16 bg-gradient-to-br from-[#bc13fe] to-[#ff00de] text-white rounded-2xl flex items-center justify-center shadow-[0_0_20px_rgba(188,19,254,0.6)] border-4 border-[#0f172a] active:scale-90 transition-transform"
+            >
+              <Plus size={32} strokeWidth={3} />
+            </button>
+          </div>
+
+          {/* AI Page */}
+          <button 
+            onClick={() => setActiveTab('ai')} 
+            className={`flex-1 flex flex-col items-center py-2 transition-all duration-300 ${activeTab === 'ai' ? 'text-[#00f2ff] translate-y-[-5px]' : 'text-gray-500'}`}
+          >
+            <Sparkles size={22} className={activeTab === 'ai' ? 'neon-text-blue' : ''} />
+            <span className="text-[9px] mt-1 font-bold uppercase tracking-widest">AI Hub</span>
           </button>
+
+          {/* Profile Hub */}
+          <button 
+            onClick={() => setActiveTab('profile')} 
+            className={`flex-1 flex flex-col items-center py-2 transition-all duration-300 ${activeTab === 'profile' ? 'text-[#00f2ff] translate-y-[-5px]' : 'text-gray-500'}`}
+          >
+            <User size={22} className={activeTab === 'profile' ? 'neon-text-blue' : ''} />
+            <span className="text-[9px] mt-1 font-bold uppercase tracking-widest">Profile</span>
+          </button>
+
         </div>
       </div>
 
-
+      {/* Modallar */}
       <TransactionModal
         isOpen={isModalOpen}
         onClose={() => { setIsModalOpen(false); setEditingTransaction(null); }}
@@ -179,6 +178,7 @@ function App() {
         wallets={data.wallets}
         initialData={editingTransaction}
       />
+      
     </div>
   );
 }
