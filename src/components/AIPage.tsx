@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { Send, Sparkles, Check, Brain, Wallet as WalletIcon, ArrowRight } from 'lucide-react';
+import { Send, Sparkles, Check, Brain, Wallet as WalletIcon } from 'lucide-react';
 import * as Icons from 'lucide-react';
 import { AppData, TransactionType } from '../types';
 
@@ -33,7 +33,7 @@ export default function AIPage({ data, onAddTransaction }: AIPageProps) {
   const [messages, setMessages] = useState<Message[]>([
     {
       id: '1',
-      text: "Salom! Men sizning aqlli yordamchingizman. Har qanday xarajat yoki daromadni yozing, men ularni tahlil qilaman.\n\nMisol: 'Bugun tushlikka 45000 so'm ishlatdim' yoki 'Ish haqi tushdi 8 mln'",
+      text: "Salom! Men sizning aqlli moliyaviy yordamchingizman. Har qanday xarajat yoki daromadni yozing, men ularni tahlil qilaman.\n\nMasalan: 'Bozordan 50000 so'mga go'sht oldim' yoki 'Ish haqi 6 mln tushdi'",
       sender: 'ai',
     },
   ]);
@@ -50,7 +50,6 @@ export default function AIPage({ data, onAddTransaction }: AIPageProps) {
     if (!apiKey) return { error: "Iltimos, avval Sozlamalar bo'limida Gemini API kalitini kiriting." };
 
     try {
-      // Promptni shakllantirish (Podkategoriyalar bilan)
       const systemPrompt = `Sen professional buxgalter yordamchisisan.
 Mavjud Kategoriyalar va ularning Podkategoriyalari:
 ${data.categories.map(c => `- ${c.name} (ID: ${c.id}, Turi: ${c.type}, Podkategoriyalar: ${c.subCategories?.join(', ') || 'yo\'q'})`).join('\n')}
@@ -80,12 +79,16 @@ Bugungi sana: ${new Date().toISOString().split('T')[0]}`;
       });
 
       const result = await response.json();
+      if (!result.candidates || !result.candidates[0]?.content?.parts[0]?.text) {
+        throw new Error("API xatoligi");
+      }
+
       let text = result.candidates[0].content.parts[0].text;
       text = text.replace(/```json/g, '').replace(/```/g, '').trim();
       return JSON.parse(text);
     } catch (err) {
       console.error(err);
-      return { error: "AI bilan aloqada xatolik yuz berdi." };
+      return { error: "AI bilan aloqada xatolik yuz berdi. Internetni tekshiring." };
     }
   };
 
@@ -112,7 +115,11 @@ Bugungi sana: ${new Date().toISOString().split('T')[0]}`;
           id: Date.now().toString() + i,
           text: `${data.categories.find(c => c.id === tx.categoryId)?.name}: ${tx.amount.toLocaleString()} UZS`,
           sender: 'ai',
-          transactionData: { ...tx, walletId: data.wallets[0].id, date: new Date().toISOString().split('T')[0] }
+          transactionData: { 
+            ...tx, 
+            walletId: data.wallets[0].id, 
+            date: new Date().toISOString().split('T')[0] 
+          }
         }]);
       });
     }
@@ -121,14 +128,14 @@ Bugungi sana: ${new Date().toISOString().split('T')[0]}`;
   const handleConfirm = (msg: Message) => {
     if (msg.transactionData) {
       onAddTransaction(msg.transactionData);
-      setMessages(prev => prev.map(m => m.id === msg.id ? { ...m, text: m.text + " ✅", transactionData: undefined } : m));
+      setMessages(prev => prev.map(m => m.id === msg.id ? { ...m, text: m.text + " ✅ Saqlandi", transactionData: undefined } : m));
     }
   };
 
   return (
     <div className="flex flex-col h-full bg-transparent pb-32 pt-safe">
       <div className="px-6 py-4 flex items-center gap-3">
-        <div className="p-2.5 bg-blue-500/20 rounded-xl text-blue-400 border border-blue-500/20">
+        <div className="p-2.5 bg-blue-500/20 rounded-xl text-blue-400 border border-blue-500/20 shadow-lg shadow-blue-500/10">
           <Brain size={24} />
         </div>
         <div>
@@ -148,20 +155,19 @@ Bugungi sana: ${new Date().toISOString().split('T')[0]}`;
                 ? 'bg-blue-600 text-white rounded-tr-none shadow-lg shadow-blue-600/20' 
                 : 'glass-card text-gray-200 rounded-tl-none'
             } ${m.isError ? 'border-rose-500/50 bg-rose-500/10' : ''}`}>
-              <p className="text-sm leading-relaxed whitespace-pre-wrap">{m.text}</p>
+              <p className="text-sm leading-relaxed whitespace-pre-wrap font-medium">{m.text}</p>
               
               {m.transactionData && (
-                <div className="mt-4 p-3 bg-white/5 rounded-2xl border border-white/10 space-y-3">
+                <div className="mt-4 p-4 bg-black/20 rounded-2xl border border-white/5 space-y-3">
                   <div className="flex justify-between items-center">
                     <div className="flex items-center gap-2">
-                      <div className="p-1.5 bg-blue-500/20 rounded-lg text-blue-400">
+                      <div className="p-1.5 bg-blue-500/10 rounded-lg text-blue-400">
                         <DynamicIcon name={data.categories.find(c => c.id === m.transactionData?.categoryId)?.icon || 'Circle'} size={14} />
                       </div>
-                      <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">
-                        {m.transactionData.subCategory || 'Tranzaksiya'}
+                      <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">
+                        {m.transactionData.subCategory || 'Kirim-chiqim'}
                       </span>
                     </div>
-                    <span className="text-[10px] text-gray-500 font-medium">{m.transactionData.date}</span>
                   </div>
                   <div className="text-xl font-black text-white">{m.transactionData.amount.toLocaleString()} <span className="text-xs text-gray-500">UZS</span></div>
                   <button onClick={() => handleConfirm(m)} className="w-full py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-2 active:scale-95 shadow-lg shadow-emerald-600/20">
@@ -174,7 +180,7 @@ Bugungi sana: ${new Date().toISOString().split('T')[0]}`;
         ))}
         {loading && (
           <div className="flex justify-start">
-            <div className="glass-card p-4 rounded-3xl rounded-tl-none flex gap-1">
+            <div className="glass-card p-4 rounded-3xl rounded-tl-none flex gap-1.5">
               <div className="w-1.5 h-1.5 bg-blue-500 rounded-full animate-bounce" style={{animationDelay:'0ms'}}></div>
               <div className="w-1.5 h-1.5 bg-blue-500 rounded-full animate-bounce" style={{animationDelay:'150ms'}}></div>
               <div className="w-1.5 h-1.5 bg-blue-500 rounded-full animate-bounce" style={{animationDelay:'300ms'}}></div>
@@ -185,13 +191,13 @@ Bugungi sana: ${new Date().toISOString().split('T')[0]}`;
       </div>
 
       <div className="fixed bottom-24 left-6 right-6">
-        <div className="glass-card rounded-full p-1.5 flex items-center shadow-2xl">
+        <div className="glass-card rounded-full p-1.5 flex items-center shadow-2xl ring-1 ring-white/10">
           <input
             type="text"
             value={input}
             onChange={(e) => setInput(e.target.value)}
             onKeyPress={(e) => e.key === 'Enter' && handleSend()}
-            placeholder="AI dan so'rang..."
+            placeholder="AI bilan moliya boshqaruvi..."
             className="flex-1 bg-transparent border-none focus:ring-0 text-white px-5 text-sm placeholder-gray-500"
           />
           <button onClick={handleSend} disabled={!input.trim() || loading} className="w-11 h-11 bg-blue-600 rounded-full flex items-center justify-center text-white active:scale-90 transition-transform shadow-lg shadow-blue-600/30 disabled:opacity-50">
