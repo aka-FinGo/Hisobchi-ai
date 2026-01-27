@@ -10,20 +10,27 @@ interface HomePageProps {
     categories: Category[];
     profile: any;
   };
-  onNavigate: (page: 'home' | 'stats' | 'budget' | 'ai' | 'profile') => void;
+  onNavigate: (page: any) => void;
+  onWalletClick: (walletId: string) => void;
+  onTransactionClick: (tx: Transaction) => void;
+  onAddWallet: () => void;
 }
 
 const COLORS = ['#f97316', '#ea580c', '#c2410c', '#7c2d12', '#fb923c'];
 
-export default function HomePage({ data, onNavigate }: HomePageProps) {
+export default function HomePage({ data, onNavigate, onWalletClick, onTransactionClick, onAddWallet }: HomePageProps) {
   const [viewMode, setViewMode] = useState<'chart' | 'cards'>('chart');
   const [selectedWalletId, setSelectedWalletId] = useState<string | null>(null);
 
-  const totalBalance = data.wallets.reduce((acc, w) => acc + (w.currency === 'USD' ? w.balance * 12600 : w.balance), 0);
+  // Valyuta kursi (taxminiy)
+  const RATE = 12600; 
+
+  const totalBalance = data.wallets.reduce((acc, w) => acc + (w.currency === 'USD' ? w.balance * RATE : w.balance), 0);
 
   const chartData = data.wallets.map(w => ({
+    id: w.id, // ID qo'shildi click uchun
     name: w.name,
-    value: w.currency === 'USD' ? w.balance * 12600 : w.balance,
+    value: w.currency === 'USD' ? w.balance * RATE : w.balance,
   })).filter(i => i.value > 0);
 
   const displayedTransactions = selectedWalletId 
@@ -32,9 +39,18 @@ export default function HomePage({ data, onNavigate }: HomePageProps) {
 
   const sortedTransactions = [...displayedTransactions]
     .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
-    .slice(0, 20); 
+    .slice(0, 30); // 30 ta eng oxirgi
 
   const getCategory = (id: string) => data.categories.find(c => c.id === id);
+
+  // Diagramma bo'lagi bosilganda
+  const handlePieClick = (entry: any) => {
+    if (entry && entry.id) {
+       setSelectedWalletId(entry.id);
+       setViewMode('cards'); // Kartalar ko'rinishiga o'tish
+       // Agar kerak bo'lsa, avtomatik scroll qilish mumkin
+    }
+  };
 
   return (
     <div className="h-full flex flex-col overflow-y-auto scrollbar-hide pt-safe px-6 pb-32">
@@ -47,36 +63,25 @@ export default function HomePage({ data, onNavigate }: HomePageProps) {
             {totalBalance.toLocaleString()} <span className="text-sm text-orange-500">UZS</span>
           </h1>
         </div>
-        <button 
-          onClick={() => onNavigate('profile')}
-          className="w-12 h-12 rounded-full block-3d flex items-center justify-center p-1 active:scale-95 transition-transform"
-        >
+        <button onClick={() => onNavigate('profile')} className="w-12 h-12 rounded-full block-3d flex items-center justify-center p-1 active:scale-95 transition-transform">
            <img src={data.profile?.avatar || "https://api.dicebear.com/7.x/avataaars/svg?seed=FinGo"} className="rounded-full" alt="Avatar"/>
         </button>
       </div>
 
       {/* Switcher */}
       <div className="flex bg-zinc-900/50 p-1.5 rounded-2xl mb-8 border border-white/5">
-        <button 
-          onClick={() => setViewMode('chart')}
-          className={`flex-1 py-3 rounded-xl text-xs font-bold uppercase tracking-wider transition-all flex items-center justify-center gap-2 ${viewMode === 'chart' ? 'block-3d text-orange-500 neon-border-thin' : 'text-gray-600'}`}
-        >
+        <button onClick={() => setViewMode('chart')} className={`flex-1 py-3 rounded-xl text-xs font-bold uppercase tracking-wider transition-all flex items-center justify-center gap-2 ${viewMode === 'chart' ? 'block-3d text-orange-500 neon-border-thin' : 'text-gray-600'}`}>
           <Layers size={16} /> Diagramma
         </button>
-        <button 
-          onClick={() => setViewMode('cards')}
-          className={`flex-1 py-3 rounded-xl text-xs font-bold uppercase tracking-wider transition-all flex items-center justify-center gap-2 ${viewMode === 'cards' ? 'block-3d text-orange-500 neon-border-thin' : 'text-gray-600'}`}
-        >
+        <button onClick={() => setViewMode('cards')} className={`flex-1 py-3 rounded-xl text-xs font-bold uppercase tracking-wider transition-all flex items-center justify-center gap-2 ${viewMode === 'cards' ? 'block-3d text-orange-500 neon-border-thin' : 'text-gray-600'}`}>
           <CreditCard size={16} /> Kartalar
         </button>
       </div>
 
-      {/* --- DIAGRAMMA (3D Ring bilan) --- */}
+      {/* Diagramma */}
       {viewMode === 'chart' && (
         <div className="flex justify-center mb-10 relative">
            <div className="absolute inset-0 bg-orange-500/5 blur-[50px] rounded-full pointer-events-none"></div>
-
-           {/* 3D Halqa */}
            <div className="chart-ring-3d w-[280px] h-[280px] relative p-4">
               <ResponsiveContainer width="100%" height="100%">
                 <PieChart>
@@ -87,19 +92,16 @@ export default function HomePage({ data, onNavigate }: HomePageProps) {
                     paddingAngle={6}
                     dataKey="value"
                     stroke="none"
+                    onClick={(data) => handlePieClick(data.payload)} // Click Event
+                    cursor="pointer"
                   >
                     {chartData.map((entry, index) => (
-                      <Cell 
-                        key={`cell-${index}`} 
-                        fill={COLORS[index % COLORS.length]} 
-                        className="drop-shadow-[0_0_5px_rgba(0,0,0,0.8)]"
-                      />
+                      <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} className="drop-shadow-[0_0_5px_rgba(0,0,0,0.8)] hover:opacity-80 transition-opacity" />
                     ))}
                   </Pie>
                   <Tooltip formatter={(value: number) => value.toLocaleString()} contentStyle={{backgroundColor:'#27272a', borderRadius:'12px', border:'none'}}/>
                 </PieChart>
               </ResponsiveContainer>
-              
               <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
                 <p className="text-gray-600 text-[9px] font-bold uppercase tracking-widest">Mavjud</p>
                 <p className="text-xl font-black text-white">{totalBalance.toLocaleString()}</p>
@@ -109,10 +111,10 @@ export default function HomePage({ data, onNavigate }: HomePageProps) {
         </div>
       )}
 
-      {/* --- KARTALAR --- */}
+      {/* Kartalar */}
       {viewMode === 'cards' && (
         <div className="mb-8 overflow-x-auto pb-4 -mx-6 px-6 scrollbar-hide flex gap-4 snap-x">
-             <button className="snap-center shrink-0 w-[60px] h-[160px] block-3d rounded-2xl flex items-center justify-center text-orange-500 active:scale-95">
+             <button onClick={onAddWallet} className="snap-center shrink-0 w-[60px] h-[160px] block-3d rounded-2xl flex items-center justify-center text-orange-500 active:scale-95">
                 <Plus size={24} />
              </button>
              {data.wallets.map((wallet) => (
@@ -133,20 +135,24 @@ export default function HomePage({ data, onNavigate }: HomePageProps) {
         </div>
       )}
 
-      {/* --- TRANZAKSIYALAR --- */}
+      {/* Tranzaksiyalar */}
       <h3 className="text-sm font-black text-white uppercase tracking-wider mb-4 pl-1">
-         {selectedWalletId ? "Karta tarixi" : "So'nggi harakatlar"}
+         {selectedWalletId ? (data.wallets.find(w => w.id === selectedWalletId)?.name + " tarixi") : "So'nggi harakatlar"}
       </h3>
       <div className="space-y-3">
          {sortedTransactions.map(t => {
            const cat = getCategory(t.categoryId);
            return (
-             <div key={t.id} className="block-3d rounded-2xl p-4 flex items-center justify-between active:scale-[0.98]">
+             <button 
+                key={t.id} 
+                onClick={() => onTransactionClick(t)} // Detail Modal ochish
+                className="w-full block-3d rounded-2xl p-4 flex items-center justify-between active:scale-[0.98] transition-transform"
+             >
                 <div className="flex items-center gap-4">
                    <div className="w-10 h-10 rounded-xl bg-zinc-900 flex items-center justify-center border border-white/5 text-orange-500 shadow-inner">
                       <span className="font-bold text-[10px]">{cat?.name.slice(0,2).toUpperCase()}</span>
                    </div>
-                   <div>
+                   <div className="text-left">
                       <h4 className="text-white font-bold text-sm">{cat?.name}</h4>
                       <p className="text-gray-600 text-[10px] font-bold uppercase mt-0.5">{t.note || t.date}</p>
                    </div>
@@ -154,7 +160,7 @@ export default function HomePage({ data, onNavigate }: HomePageProps) {
                 <div className={`font-black text-sm ${t.type === 'income' ? 'text-emerald-500' : 'text-rose-500'}`}>
                    {t.type === 'income' ? '+' : '-'}{t.amount.toLocaleString()}
                 </div>
-             </div>
+             </button>
            )
          })}
       </div>
