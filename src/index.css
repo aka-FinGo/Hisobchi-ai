@@ -4,22 +4,50 @@
 
 @layer base {
   :root {
-    --neon-blue: #00f2ff;
-    --neon-purple: #bc13fe;
-    --neon-pink: #ff00de;
+    --neon-orange: #f97316; /* Tailwind Orange-500 */
+    --dark-bg: #18181b;     /* Zinc-900 */
+    --block-bg: #27272a;    /* Zinc-800 */
   }
   body {
-    background: radial-gradient(circle at 50% 0%, #1a1a2e 0%, #0f172a 50%, #020617 100%);
-    @apply text-white overflow-hidden h-screen font-['Plus_Jakarta_Sans'];
+    background-color: var(--dark-bg);
+    background-image: radial-gradient(circle at 50% 0%, #3f3f46 0%, #18181b 60%);
+    color: #e4e4e7;
+    font-family: 'Plus Jakarta Sans', sans-serif;
+    overflow: hidden;
+    height: 100vh;
   }
 }
 
 @layer components {
-  .glass-neon {
-    @apply bg-white/5 backdrop-blur-2xl border border-white/10 shadow-[0_0_20px_rgba(0,0,0,0.5)];
+  /* 3D Blok Effekti (Bo'rtib chiqqan) */
+  .block-3d {
+    @apply bg-zinc-800 border border-white/5;
+    box-shadow: 
+      8px 8px 16px #0f0f11, 
+      -8px -8px 16px #3f3f43;
   }
-  .neon-text-blue { text-shadow: 0 0 10px var(--neon-blue); }
-  .neon-btn-purple { 
-    @apply bg-gradient-to-r from-[#bc13fe] to-[#ff00de] shadow-[0_0_15px_rgba(188,19,254,0.5)] active:scale-95 transition-all;
+
+  /* Bosilgandagi 3D effekt (Ichkariga kirgan) */
+  .block-3d-pressed {
+    @apply bg-zinc-800 border border-white/5;
+    box-shadow: 
+      inset 6px 6px 12px #0f0f11, 
+      inset -6px -6px 12px #3f3f43;
+  }
+
+  /* Neon Chiroq Effekti (To'q Sariq) */
+  .neon-orange-border {
+    border: 1px solid var(--neon-orange);
+    box-shadow: 0 0 15px rgba(249, 115, 22, 0.3), inset 0 0 10px rgba(249, 115, 22, 0.1);
+  }
+
+  .text-glow-orange {
+    text-shadow: 0 0 12px rgba(249, 115, 22, 0.6);
+  }
+  
+  .orange-gradient-text {
+    @apply bg-clip-text text-transparent bg-gradient-to-br from-orange-400 to-amber-600;
   }
 }
+
+.scrollbar-hide::-webkit-scrollbar { display: none; }
