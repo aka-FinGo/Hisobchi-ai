@@ -1,64 +1,43 @@
 import { AppData, Category, Wallet } from './types';
 
-// Baza kalitini yangilaymiz: 'cyber_v1'
-const STORAGE_KEY = 'hisobchi_cyber_v1';
+const STORAGE_KEY = 'hisobchi_pro_v3_hierachy'; // Keyni yangiladik
 
 const defaultCategories: Category[] = [
-  { id: 'c1', name: 'Oziq-ovqat', icon: 'ShoppingCart', type: 'expense', subCategories: ['Bozor', 'Kafe', 'Shirinliklar'] },
-  { id: 'c2', name: 'Transport', icon: 'Car', type: 'expense', subCategories: ['Taksi', 'Benzin', 'Avtobus'] },
-  { id: 'c3', name: 'Uy-joy', icon: 'Home', type: 'expense', subCategories: ['Kommunal', 'Ijara'] },
-  { id: 'c9', name: 'Daromad', icon: 'Briefcase', type: 'income', subCategories: ['Ish haqi', 'Bonus', 'Freelance'] },
+  { 
+    id: 'c1', name: 'Oziq-ovqat', icon: 'ShoppingCart', type: 'expense', 
+    subs: [
+      { id: 's1', name: 'Bozorlik', items: [{id: 'i1', name: 'Go\'sht'}, {id: 'i2', name: 'Sabzavot'}] }
+    ] 
+  },
+  { 
+    id: 'c2', name: 'Daromad', icon: 'Briefcase', type: 'income', 
+    subs: [
+      { id: 's2', name: 'Ish haqi', items: [{id: 'm1', name: 'Yanvar'}, {id: 'm2', name: 'Fevral'}] },
+      { id: 's3', name: 'Zakazlar', items: [{id: 'z1', name: '123_01'}, {id: 'z2', name: '145_01'}] }
+    ] 
+  },
 ];
 
 const defaultWallets: Wallet[] = [
-  { id: 'w1', name: 'Asosiy Hamyon', type: 'card', balance: 0, currency: 'UZS', colorTheme: 'from-blue-600 to-indigo-600' },
-  { id: 'w2', name: 'Naqd Pul', type: 'cash', balance: 0, currency: 'UZS', colorTheme: 'from-emerald-500 to-teal-600' },
+  { id: 'w1', name: 'Naqd So\'m', type: 'cash', balance: 0, currency: 'UZS', colorTheme: 'orange' },
+  { id: 'w2', name: 'Plastik So\'m', type: 'card', balance: 0, currency: 'UZS', colorTheme: 'blue' },
+  { id: 'w3', name: 'Naqd Dollar', type: 'dollar', balance: 0, currency: 'USD', colorTheme: 'green' },
 ];
 
 const defaultData: AppData = {
-  profile: {
-    name: 'Foydalanuvchi',
-    avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Felix',
-    currency: 'UZS',
-    theme: 'cyber'
-  },
+  profile: { name: 'Admin', avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=FinGo' },
   wallets: defaultWallets,
   transactions: [],
   categories: defaultCategories,
-  budgets: [],
-  aiSettings: {
-    provider: 'gemini',
-    apiKey: '',
-    model: 'gemini-1.5-flash',
-    tokensUsed: 0,
-    tokenLimit: 1000000,
-  },
 };
 
 export const loadData = (): AppData => {
   try {
     const stored = localStorage.getItem(STORAGE_KEY);
-    if (stored) {
-      const parsed = JSON.parse(stored);
-      // Agar bazada profile yoki boshqa qismlar bo'lmasa, default'dan olamiz
-      return {
-        ...defaultData,
-        ...parsed,
-        profile: parsed.profile || defaultData.profile,
-        budgets: parsed.budgets || defaultData.budgets,
-        aiSettings: parsed.aiSettings || defaultData.aiSettings
-      };
-    }
-  } catch (error) {
-    console.error('Data load error:', error);
-  }
-  return defaultData;
+    return stored ? JSON.parse(stored) : defaultData;
+  } catch { return defaultData; }
 };
 
-export const saveData = (data: AppData): void => {
-  try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
-  } catch (error) {
-    console.error('Data save error:', error);
-  }
+export const saveData = (data: AppData) => {
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
 };
