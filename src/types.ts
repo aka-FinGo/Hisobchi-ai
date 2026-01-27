@@ -10,51 +10,45 @@ export interface Wallet {
   colorTheme?: string;
 }
 
+// 3-darajali tuzilma
+export interface SubItem {
+  id: string;
+  name: string;
+}
+
+export interface SubCategory {
+  id: string;
+  name: string;
+  items: SubItem[]; // Quyi kategoriyalar (Masalan: Yanvar, Fevral)
+}
+
 export interface Category {
   id: string;
   name: string;
   icon: string;
   type: TransactionType;
-  subCategories?: string[];
+  subs: SubCategory[]; // Podkategoriyalar (Masalan: Ish haqi)
 }
 
 export interface Transaction {
   id: string;
   amount: number;
-  categoryId: string;
-  subCategory?: string;
   walletId: string;
   type: TransactionType;
+  
+  // Ierarxiya
+  categoryId: string;
+  subCategoryId?: string;
+  childCategoryId?: string; // 3-daraja
+  
   date: string;
   note?: string;
-}
-
-export interface Budget {
-  categoryId: string;
-  limit: number;
-  spent: number;
-}
-
-export interface UserProfile {
-  name: string;
-  avatar: string;
-  currency: Currency;
-  theme: 'cyber' | 'glass';
-}
-
-export interface AISettings {
-  provider: 'gemini' | 'groq' | 'openai';
-  apiKey: string;
-  model: string;
-  tokensUsed: number;
-  tokenLimit: number;
+  location?: string; // Lokatsiya
 }
 
 export interface AppData {
-  profile: UserProfile;
+  profile: any;
   wallets: Wallet[];
   transactions: Transaction[];
   categories: Category[];
-  budgets: Budget[];
-  aiSettings: AISettings;
 }
