@@ -21,15 +21,19 @@ function App() {
   // Modallar
   const [isTxModalOpen, setIsTxModalOpen] = useState(false);
   const [isWalletModalOpen, setIsWalletModalOpen] = useState(false);
+  
+  // Tahrirlash uchun State
   const [editingTx, setEditingTx] = useState<Transaction | null>(null);
+  const [editingWallet, setEditingWallet] = useState<Wallet | null>(null); // MUHIM
+  
   const [detailTx, setDetailTx] = useState<Transaction | null>(null);
-  const [editingWallet, setEditingWallet] = useState<Wallet | null>(null);
-
   const [contextMenu, setContextMenu] = useState<{ x: number, y: number, item: any, type: 'wallet' | 'tx' } | null>(null);
 
-  // Back Button Logic
+  useEffect(() => { saveData(data); }, [data]);
+
+  // Back Button
   useEffect(() => {
-    CapacitorApp.addListener('backButton', ({ canGoBack }) => {
+    CapacitorApp.addListener('backButton', () => {
       if (isTxModalOpen || isWalletModalOpen || detailTx || contextMenu) {
          setIsTxModalOpen(false); setIsWalletModalOpen(false); setDetailTx(null); setContextMenu(null);
          return;
@@ -44,14 +48,25 @@ function App() {
     });
   }, [isTxModalOpen, isWalletModalOpen, detailTx, contextMenu, historyStack, activeTab]);
 
-  useEffect(() => { saveData(data); }, [data]);
+  // --- HAMYON SAQLASH ---
+  const handleWalletSave = (wallet: Wallet) => {
+    if (editingWallet) {
+      // Tahrirlash
+      setData({ ...data, wallets: data.wallets.map(w => w.id === wallet.id ? wallet : w) });
+    } else {
+      // Yangi
+      setData({ ...data, wallets: [...data.wallets, wallet] });
+    }
+    setIsWalletModalOpen(false);
+    setEditingWallet(null);
+  };
 
-  // Tranzaksiya Saqlash
+  // --- TRANZAKSIYA SAQLASH ---
   const handleTransactionSave = (txData: Transaction) => {
     let newTx = [...data.transactions];
     let newW = [...data.wallets];
 
-    if (editingTx) { // Edit mode: Reverse old
+    if (editingTx) { 
        const old = data.transactions.find(t => t.id === editingTx.id);
        if(old) {
           newW = newW.map(w => w.id === old.walletId ? { ...w, balance: w.balance + (old.type === 'income' ? -old.amount : old.amount) } : w);
@@ -63,10 +78,10 @@ function App() {
     newW = newW.map(w => w.id === finalTx.walletId ? { ...w, balance: w.balance + (finalTx.type === 'income' ? finalTx.amount : -finalTx.amount) } : w);
 
     setData({ ...data, transactions: newTx, wallets: newW });
-    setIsTxModalOpen(false); setEditingTx(null); setDetailTx(null);
+    setIsTxModalOpen(false); setEditingTx(null);
   };
 
-  // O'chirishlar
+  // O'chirish
   const handleDeleteTx = (id: string) => {
      const tx = data.transactions.find(t => t.id === id);
      if(!tx) return;
@@ -98,18 +113,16 @@ function App() {
         {activeTab === 'ai' && <AIPage data={data} onAddTransaction={handleTransactionSave} />} 
       </div>
 
-      {/* FIXED MENU BAR */}
+      {/* MENU BAR */}
       <div className="fixed bottom-0 left-0 right-0 z-40 bg-[#0a0e17]/95 backdrop-blur-md pb-4 pt-2 border-t border-white/5">
         <div className="flex justify-between items-center px-6">
            <button onClick={() => setActiveTab('home')} className={`flex flex-col items-center ${activeTab === 'home' ? 'text-[#00d4ff]' : 'text-gray-600'}`}><Home size={24}/></button>
            <button onClick={() => setActiveTab('stats')} className={`flex flex-col items-center ${activeTab === 'stats' ? 'text-[#00d4ff]' : 'text-gray-600'}`}><BarChart2 size={24}/></button>
-           
            <div className="relative -top-6">
               <button onClick={() => { setEditingTx(null); setIsTxModalOpen(true); }} className="w-16 h-16 rounded-full bg-[#141e3c] border border-[#00d4ff]/50 text-[#00d4ff] flex items-center justify-center shadow-[0_0_20px_rgba(0,212,255,0.4)] active:scale-95 transition-transform">
                 <Plus size={32} strokeWidth={3} />
               </button>
            </div>
-           
            <button onClick={() => setActiveTab('budget')} className={`flex flex-col items-center ${activeTab === 'budget' ? 'text-[#00d4ff]' : 'text-gray-600'}`}><PieChart size={24}/></button>
            <button onClick={() => setActiveTab('ai')} className={`flex flex-col items-center ${activeTab === 'ai' ? 'text-[#00d4ff]' : 'text-gray-600'}`}><Sparkles size={24}/></button>
         </div>
@@ -119,20 +132,28 @@ function App() {
       {contextMenu && (
           <div className="absolute bg-[#141e3c] border border-white/10 rounded-2xl p-2 w-44 shadow-2xl z-[150] animate-slideUp" style={{ top: contextMenu.y - 100, left: Math.min(contextMenu.x - 20, window.innerWidth - 180) }} onClick={e => e.stopPropagation()}>
               <button onClick={() => { 
+                  // Tahrirlash bosilganda
                   if(contextMenu.type === 'tx') { setEditingTx(contextMenu.item); setIsTxModalOpen(true); }
-                  if(contextMenu.type === 'wallet') { setEditingWallet(contextMenu.item); setIsWalletModalOpen(true); }
+                  if(contextMenu.type === 'wallet') { 
+                      setEditingWallet(contextMenu.item); // State yangilanadi
+                      setIsWalletModalOpen(true); // Modal ochiladi
+                  }
                   setContextMenu(null); 
               }} className="w-full text-left px-3 py-3 text-white text-sm font-bold hover:bg-white/5 rounded-xl">✏️ Tahrirlash</button>
+              
               <div className="h-[1px] bg-white/5 my-1"></div>
+              
               <button onClick={() => { if(contextMenu.type === 'tx') handleDeleteTx(contextMenu.item.id); else handleDeleteWallet(contextMenu.item.id); }} className="w-full text-left px-3 py-3 text-rose-500 text-sm font-bold hover:bg-rose-500/10 rounded-xl">🗑️ O'chirish</button>
           </div>
       )}
 
-      {/* Modallar */}
-      <WalletModal isOpen={isWalletModalOpen} onClose={() => setIsWalletModalOpen(false)} onSave={(w) => {
-          if(editingWallet) setData({...data, wallets: data.wallets.map(old => old.id === w.id ? w : old)});
-          else setData({...data, wallets: [...data.wallets, w]});
-      }} initialData={editingWallet} />
+      {/* MODALLAR */}
+      <WalletModal 
+        isOpen={isWalletModalOpen} 
+        onClose={() => { setIsWalletModalOpen(false); setEditingWallet(null); }} 
+        onSave={handleWalletSave} 
+        initialData={editingWallet} // MUHIM: Prop sifatida uzatildi
+      />
       
       <TransactionModal isOpen={isTxModalOpen} onClose={() => setIsTxModalOpen(false)} onSave={handleTransactionSave} categories={data.categories} wallets={data.wallets} initialData={editingTx} onAddCategory={(c) => setData({...data, categories: [...data.categories, c]})} onUpdateCategories={(u) => setData({...data, categories: u})} />
       
