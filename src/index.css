@@ -4,52 +4,62 @@
 
 @layer base {
   :root {
-    --neon-orange: #f97316;
-    --dark-surface: #18181b; /* Zinc-950 */
-    --3d-light: #27272a;     /* Zinc-800 */
-    --3d-shadow: #09090b;    /* Zinc-950 */
+    /* 12.html dan olingan ranglar */
+    --bg: #0c0f14;
+    --panel: #161a22;
+    --neon: #2ef2ff; /* Cyan Neon */
+    --soft-neon: rgba(46, 242, 255, 0.15);
   }
   body {
-    background-color: var(--dark-surface);
-    background-image: radial-gradient(circle at 50% 0%, #3f3f46 0%, #18181b 70%);
-    color: #e4e4e7;
+    background-color: var(--bg);
+    color: #cfd8dc;
     font-family: 'Plus Jakarta Sans', sans-serif;
-    overflow: hidden; 
+    overflow: hidden;
     height: 100vh;
   }
 }
 
 @layer components {
-  /* 3D Bo'rtib chiqqan blok */
-  .block-3d {
-    background: linear-gradient(145deg, #202023, #1b1b1e);
-    box-shadow:  5px 5px 10px var(--3d-shadow), 
-                 -5px -5px 10px var(--3d-light);
-    border: 1px solid rgba(255,255,255,0.05);
+  /* Asosiy 3D Panel (Knob style) */
+  .neu-panel {
+    background: var(--panel);
+    box-shadow: 
+      -5px -5px 10px rgba(255, 255, 255, 0.05),
+      5px 5px 15px rgba(0, 0, 0, 0.6);
+    border-radius: 20px;
+    border: 1px solid rgba(255,255,255,0.02);
   }
 
-  /* Diagramma atrofi uchun maxsus Halqa (0.2mm neon chiziq bilan) */
-  .chart-ring-3d {
-    @apply rounded-full flex items-center justify-center;
-    background: #18181b;
-    /* 3D bo'rtma effekt */
+  /* Bosilganda (Ichkariga kirish) */
+  .neu-pressed {
+    background: var(--panel);
     box-shadow: 
-      6px 6px 12px var(--3d-shadow), 
-      -6px -6px 12px var(--3d-light),
-      inset 2px 2px 5px rgba(0,0,0,0.5);
-    /* 0.2mm ingichka neon chiziq */
-    border: 1px solid rgba(249, 115, 22, 0.3); 
+      inset 5px 5px 10px rgba(0, 0, 0, 0.7),
+      inset -5px -5px 10px rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(0,0,0,0.2);
+  }
+
+  /* Diagramma uchun bo'rtib chiqqan doira */
+  .chart-3d-circle {
+    border-radius: 50%;
+    background: var(--panel);
+    box-shadow:
+      0 16px 35px rgba(0,0,0,.9),
+      0 0 30px rgba(46,242,255,.1), /* Neon glow */
+      inset 0 2px 2px rgba(255,255,255,.1),
+      inset 0 -10px 15px rgba(0,0,0,.95);
+  }
+
+  /* Neon Matn */
+  .text-neon {
+    color: var(--neon);
+    text-shadow: 0 0 10px rgba(46, 242, 255, 0.6);
   }
 
   /* Ingichka Neon Chiziq */
-  .neon-border-thin {
-    border: 1px solid rgba(249, 115, 22, 0.5);
-    box-shadow: 0 0 4px rgba(249, 115, 22, 0.2);
-  }
-
-  /* Matn nuri */
-  .text-glow {
-    text-shadow: 0 0 12px rgba(249, 115, 22, 0.6);
+  .border-neon-thin {
+    border: 1px solid rgba(46, 242, 255, 0.3);
+    box-shadow: 0 0 5px rgba(46, 242, 255, 0.2);
   }
 }
 
