@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { X, ArrowLeft, Calendar, MapPin, ChevronRight, Plus } from 'lucide-react';
+import { X, ArrowLeft, MapPin, Plus, DollarSign } from 'lucide-react';
 import { TransactionType, Wallet, Category, Transaction } from '../types';
 
 interface Props {
@@ -9,251 +9,150 @@ interface Props {
   categories: Category[];
   wallets: Wallet[];
   initialData?: Transaction | null;
-  onAddCategory: (cat: Category) => void; // App.tsx dan keladi
-  onUpdateCategories: (cats: Category[]) => void;
+  onAddCategory: (cat: Category) => void;
 }
 
-// Modal ichidagi sahifalar
-type ViewState = 'main' | 'new-cat' | 'new-sub' | 'new-child';
-
-export default function TransactionModal({ isOpen, onClose, onSave, categories, wallets, initialData, onAddCategory, onUpdateCategories }: Props) {
-  // Asosiy ma'lumotlar
+export default function TransactionModal({ isOpen, onClose, onSave, categories, wallets, initialData, onAddCategory }: Props) {
+  const [step, setStep] = useState(1);
   const [type, setType] = useState<TransactionType>('expense');
   const [amount, setAmount] = useState('');
   const [walletId, setWalletId] = useState('');
+  const [exchangeRate, setExchangeRate] = useState('12800'); // Default kurs
+  
   const [catId, setCatId] = useState('');
-  const [subId, setSubId] = useState('');
-  const [childId, setChildId] = useState('');
   const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
   const [note, setNote] = useState('');
 
-  // Navigatsiya State
-  const [view, setView] = useState<ViewState>('main');
-  const [newItemName, setNewItemName] = useState('');
-
+  // Tahrirlash rejimini yuklash
   useEffect(() => {
     if (initialData) {
-      // Edit Mode
       setType(initialData.type);
       setAmount(initialData.amount.toString());
       setWalletId(initialData.walletId);
+      setExchangeRate(initialData.exchangeRate?.toString() || '12800');
       setCatId(initialData.categoryId);
-      setSubId(initialData.subCategoryId || '');
-      setChildId(initialData.childCategoryId || '');
       setDate(initialData.date);
       setNote(initialData.note || '');
+      setStep(3);
     } else {
-      // New Mode
       setAmount('');
-      setCatId('');
-      setSubId('');
-      setChildId('');
       setWalletId(wallets[0]?.id || '');
+      setStep(1);
     }
-    setView('main'); // Har doim asosiy oynadan boshlash
   }, [initialData, isOpen]);
 
-  // --- YANGI NARSA QO'SHISH LOGIKASI ---
-  const handleAddItem = () => {
-    if(!newItemName) return;
-
-    if (view === 'new-cat') {
-        // Yangi Kategoriya
-        const newCat: Category = {
-            id: `c_${Date.now()}`,
-            name: newItemName,
-            icon: 'Circle',
-            type: type,
-            subs: []
-        };
-        onAddCategory(newCat);
-        setCatId(newCat.id); // Avtomat tanlash
-    } 
-    else if (view === 'new-sub' && catId) {
-        // Yangi Podkategoriya
-        const updatedCats = categories.map(c => {
-            if(c.id === catId) {
-                return { 
-                    ...c, 
-                    subs: [...(c.subs || []), { id: `s_${Date.now()}`, name: newItemName, items: [] }] 
-                };
-            }
-            return c;
-        });
-        onUpdateCategories(updatedCats);
-    }
-    else if (view === 'new-child' && catId && subId) {
-        // Yangi Quyi Kategoriya
-        const updatedCats = categories.map(c => {
-            if(c.id === catId) {
-                return {
-                    ...c,
-                    subs: c.subs.map(s => {
-                        if(s.id === subId) {
-                            return { ...s, items: [...(s.items || []), { id: `i_${Date.now()}`, name: newItemName }] };
-                        }
-                        return s;
-                    })
-                };
-            }
-            return c;
-        });
-        onUpdateCategories(updatedCats);
-    }
-
-    setNewItemName('');
-    setView('main'); // Ortga qaytish
-  };
+  const selectedWallet = wallets.find(w => w.id === walletId);
+  const isUSD = selectedWallet?.currency === 'USD';
 
   if (!isOpen) return null;
-  const currentCategory = categories.find(c => c.id === catId);
-  const currentSub = currentCategory?.subs?.find(s => s.id === subId);
 
   return (
     <div className="fixed inset-0 z-[100] bg-[#0c0f14]/95 backdrop-blur-xl flex flex-col animate-slideUp">
-      
-      {/* Header */}
-      <div className="p-4 flex items-center justify-between border-b border-white/5">
-         {view !== 'main' ? (
-             <button onClick={() => setView('main')} className="text-[#2ef2ff] flex items-center gap-1 font-bold text-sm"><ArrowLeft size={18}/> Orqaga</button>
-         ) : <div className="w-16"></div>}
-         
-         <h2 className="text-white font-bold text-sm uppercase tracking-widest text-neon">
-            {view === 'main' ? (initialData ? 'Tahrirlash' : 'Yangi Amal') : 'Yaratish'}
+      <div className="p-4 flex justify-between items-center border-b border-white/5">
+         {step > 1 && <button onClick={() => setStep(step-1)}><ArrowLeft className="text-[#2ef2ff]"/></button>}
+         <h2 className="text-white font-bold uppercase tracking-widest text-neon">
+            {step === 1 ? 'Summa' : step === 2 ? 'Hamyon' : 'Tafsilotlar'}
          </h2>
-         
          <button onClick={onClose} className="p-2 neu-panel rounded-full text-gray-400"><X size={20}/></button>
       </div>
 
-      {/* --- ASOSIY OYNA (MAIN) --- */}
-      {view === 'main' && (
-        <div className="flex-1 overflow-y-auto p-6 space-y-8 pb-20">
-             
-             {/* 1. Summa */}
-             <div className="text-center">
+      <div className="flex-1 overflow-y-auto p-6 space-y-8 pb-20">
+         
+         {/* STEP 1: SUMMA */}
+         {step === 1 && (
+             <div className="text-center mt-10">
                  <input 
                    type="number" 
                    value={amount} 
                    onChange={(e) => setAmount(e.target.value)}
                    placeholder="0"
-                   className="w-full bg-transparent text-5xl font-bold text-center text-white focus:outline-none placeholder-gray-800 caret-[#2ef2ff] text-neon"
-                   autoFocus={!initialData}
+                   className="w-full bg-transparent text-5xl font-bold text-center text-white focus:outline-none placeholder-gray-800 text-neon caret-[#2ef2ff]"
+                   autoFocus
                  />
-                 <div className="flex justify-center gap-4 mt-4">
-                    <button onClick={() => setType('expense')} className={`px-6 py-2 rounded-xl font-bold text-xs transition-all ${type === 'expense' ? 'neu-pressed text-rose-400 border border-rose-500/30' : 'text-gray-600'}`}>CHIQIM</button>
-                    <button onClick={() => setType('income')} className={`px-6 py-2 rounded-xl font-bold text-xs transition-all ${type === 'income' ? 'neu-pressed text-[#2ef2ff] border border-cyan-500/30' : 'text-gray-600'}`}>KIRIM</button>
+                 <div className="flex justify-center gap-4 mt-8">
+                    <button onClick={() => setType('expense')} className={`px-8 py-3 rounded-xl font-bold transition-all ${type === 'expense' ? 'neu-pressed text-rose-400 shadow-[inset_0_0_10px_rgba(244,63,94,0.2)]' : 'neu-panel text-gray-500'}`}>CHIQIM</button>
+                    <button onClick={() => setType('income')} className={`px-8 py-3 rounded-xl font-bold transition-all ${type === 'income' ? 'neu-pressed text-[#2ef2ff] shadow-[inset_0_0_10px_rgba(46,242,255,0.2)]' : 'neu-panel text-gray-500'}`}>KIRIM</button>
                  </div>
+                 <button disabled={!amount} onClick={() => setStep(2)} className="w-full mt-10 py-4 neu-panel rounded-2xl text-[#2ef2ff] font-bold uppercase disabled:opacity-50">DAVOM ETISH</button>
              </div>
+         )}
 
-             {/* 2. Hamyon (Tahrirlashda ham o'zgartirish mumkin) */}
-             <div>
-                <p className="text-gray-500 text-[10px] font-bold uppercase mb-2">Hamyon</p>
-                <div className="flex gap-3 overflow-x-auto pb-2 scrollbar-hide">
-                    {wallets.map(w => (
-                        <button 
-                           key={w.id} 
-                           onClick={() => setWalletId(w.id)}
-                           className={`shrink-0 px-4 py-3 rounded-xl min-w-[100px] text-left transition-all ${walletId === w.id ? 'neu-pressed border-neon-thin' : 'neu-panel'}`}
-                        >
-                           <p className={`font-bold text-sm ${walletId === w.id ? 'text-[#2ef2ff]' : 'text-gray-400'}`}>{w.name}</p>
-                           <p className="text-[10px] text-gray-600">{w.currency}</p>
-                        </button>
-                    ))}
-                </div>
-             </div>
-
-             {/* 3. Kategoriyalar */}
+         {/* STEP 2: HAMYON */}
+         {step === 2 && (
              <div className="space-y-4">
-                 {/* Asosiy Kategoriya */}
-                 <div>
-                    <div className="flex justify-between items-center mb-2">
-                        <label className="text-gray-500 text-[10px] font-bold uppercase">Kategoriya</label>
-                        <button onClick={() => setView('new-cat')} className="text-[#2ef2ff] text-[10px] font-bold flex items-center gap-1"><Plus size={12}/> Yangi</button>
+                 {wallets.map(w => (
+                     <button 
+                        key={w.id} 
+                        onClick={() => { setWalletId(w.id); setStep(3); }}
+                        className={`w-full p-4 rounded-2xl flex justify-between items-center transition-all ${walletId === w.id ? 'neu-pressed border border-[#2ef2ff]/30' : 'neu-panel'}`}
+                     >
+                        <div className="text-left">
+                           <p className={`font-bold ${walletId === w.id ? 'text-[#2ef2ff]' : 'text-gray-300'}`}>{w.name}</p>
+                           <p className="text-xs text-gray-500">{w.type.toUpperCase()}</p>
+                        </div>
+                        <p className="font-bold text-gray-400">{w.currency}</p>
+                     </button>
+                 ))}
+             </div>
+         )}
+
+         {/* STEP 3: KURS, KATEGORIYA, SANA */}
+         {step === 3 && (
+             <div className="space-y-6">
+                 
+                 {/* KURS INPUTI (Faqat USD hamyon uchun) */}
+                 {isUSD && (
+                    <div className="bg-[#161a22] p-4 rounded-2xl border border-yellow-500/30 animate-pulse-slow">
+                        <label className="text-yellow-500 text-xs font-bold uppercase mb-2 block flex items-center gap-2">
+                           <DollarSign size={14}/> Kursni kiriting (1$ = UZS)
+                        </label>
+                        <input 
+                           type="number" 
+                           value={exchangeRate} 
+                           onChange={(e) => setExchangeRate(e.target.value)}
+                           className="w-full bg-black/30 p-3 rounded-xl text-yellow-500 font-bold text-lg outline-none border border-white/5 focus:border-yellow-500"
+                        />
                     </div>
-                    <div className="grid grid-cols-3 gap-2">
+                 )}
+
+                 {/* Kategoriya Grid */}
+                 <div>
+                    <div className="flex justify-between mb-2">
+                        <label className="text-gray-500 text-[10px] font-bold uppercase">Kategoriya</label>
+                        <button className="text-[#2ef2ff] text-[10px] font-bold">+ Yangi</button>
+                    </div>
+                    <div className="grid grid-cols-3 gap-2 max-h-40 overflow-y-auto scrollbar-hide">
                         {categories.filter(c => c.type === type).map(c => (
-                            <button key={c.id} onClick={() => { setCatId(c.id); setSubId(''); setChildId(''); }} className={`py-3 px-2 rounded-xl text-xs font-bold truncate transition-all ${catId === c.id ? 'neu-pressed text-[#2ef2ff] border-neon-thin' : 'neu-panel text-gray-500'}`}>
+                            <button key={c.id} onClick={() => setCatId(c.id)} className={`py-3 px-2 rounded-xl text-xs font-bold truncate transition-all ${catId === c.id ? 'neu-pressed text-[#2ef2ff] border border-[#2ef2ff]/30' : 'neu-panel text-gray-500'}`}>
                                 {c.name}
                             </button>
                         ))}
                     </div>
                  </div>
 
-                 {/* Podkategoriya */}
-                 {catId && (
-                     <div className="animate-slideUp">
-                        <div className="flex justify-between items-center mb-2">
-                             <label className="text-gray-500 text-[10px] font-bold uppercase">Podkategoriya</label>
-                             <button onClick={() => setView('new-sub')} className="text-[#2ef2ff] text-[10px] font-bold flex items-center gap-1"><Plus size={12}/> Yangi</button>
-                        </div>
-                        <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide">
-                            {currentCategory?.subs?.map(s => (
-                                <button key={s.id} onClick={() => { setSubId(s.id); setChildId(''); }} className={`px-4 py-2 rounded-xl whitespace-nowrap text-xs font-bold ${subId === s.id ? 'neu-pressed text-[#2ef2ff]' : 'neu-panel text-gray-500'}`}>
-                                    {s.name}
-                                </button>
-                            ))}
-                            {(!currentCategory?.subs || currentCategory.subs.length === 0) && <span className="text-xs text-gray-600 italic px-2">Hozircha yo'q</span>}
-                        </div>
-                     </div>
-                 )}
+                 {/* Sana va Izoh */}
+                 <div className="grid grid-cols-2 gap-3">
+                     <input type="date" value={date} onChange={e => setDate(e.target.value)} className="neu-panel p-3 rounded-xl text-gray-300 outline-none text-xs"/>
+                     <button className="neu-panel p-3 rounded-xl text-gray-400 flex items-center justify-center gap-2 text-xs">
+                        <MapPin size={16}/> Lokatsiya
+                     </button>
+                 </div>
+                 <input value={note} onChange={e => setNote(e.target.value)} placeholder="Izoh..." className="w-full neu-panel p-4 rounded-xl text-gray-300 outline-none text-sm"/>
 
-                 {/* Quyi Kategoriya */}
-                 {subId && (
-                     <div className="animate-slideUp">
-                        <div className="flex justify-between items-center mb-2">
-                             <label className="text-gray-500 text-[10px] font-bold uppercase">Quyi (Oy/Zakaz)</label>
-                             <button onClick={() => setView('new-child')} className="text-[#2ef2ff] text-[10px] font-bold flex items-center gap-1"><Plus size={12}/> Yangi</button>
-                        </div>
-                        <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide">
-                            {currentSub?.items?.map(i => (
-                                <button key={i.id} onClick={() => setChildId(i.id)} className={`px-4 py-2 rounded-xl whitespace-nowrap text-xs font-bold ${childId === i.id ? 'neu-pressed text-[#2ef2ff]' : 'neu-panel text-gray-500'}`}>
-                                    {i.name}
-                                </button>
-                            ))}
-                        </div>
-                     </div>
-                 )}
-             </div>
-
-             {/* Sana va Izoh */}
-             <div className="grid grid-cols-2 gap-3">
-                 <input type="date" value={date} onChange={e => setDate(e.target.value)} className="neu-panel p-3 rounded-xl text-gray-300 outline-none text-xs"/>
-                 <button className="neu-panel p-3 rounded-xl text-gray-400 flex items-center justify-center gap-2 text-xs">
-                    <MapPin size={16}/> Lokatsiya
+                 <button 
+                    onClick={() => onSave({ 
+                        id: initialData?.id || '', 
+                        amount: parseFloat(amount), 
+                        type, walletId, categoryId: catId, date, note,
+                        exchangeRate: isUSD ? parseFloat(exchangeRate) : undefined 
+                    })} 
+                    className="w-full py-4 neu-panel bg-[#161a22] rounded-2xl font-bold text-[#2ef2ff] uppercase tracking-widest shadow-[0_0_20px_rgba(46,242,255,0.2)] active:scale-95"
+                 >
+                    SAQLASH
                  </button>
              </div>
-             <input value={note} onChange={e => setNote(e.target.value)} placeholder="Izoh..." className="w-full neu-panel p-4 rounded-xl text-gray-300 outline-none text-sm"/>
-
-             <button 
-                onClick={() => onSave({ 
-                    id: initialData?.id || '', 
-                    amount: parseFloat(amount), 
-                    type, walletId, categoryId: catId, subCategoryId: subId, childCategoryId: childId, date, note 
-                })} 
-                className="w-full py-4 bg-[#161a22] rounded-2xl font-bold text-[#2ef2ff] uppercase tracking-widest shadow-[0_0_20px_rgba(46,242,255,0.2)] border border-[#2ef2ff]/30 active:scale-95 transition-transform"
-             >
-                {initialData ? 'Saqlash' : 'Qo\'shish'}
-             </button>
-        </div>
-      )}
-
-      {/* --- YANGI KATEGORIYA YARATISH SAHIFASI --- */}
-      {view !== 'main' && (
-          <div className="flex-1 p-6 flex flex-col justify-center animate-slideUp">
-              <h3 className="text-white text-lg font-bold mb-6 text-center">
-                  {view === 'new-cat' ? 'Yangi Kategoriya' : view === 'new-sub' ? `"${currentCategory?.name}" ga qo'shish` : `"${currentSub?.name}" ga qo'shish`}
-              </h3>
-              <input 
-                 autoFocus
-                 value={newItemName}
-                 onChange={e => setNewItemName(e.target.value)}
-                 placeholder="Nomini yozing..."
-                 className="w-full bg-transparent border-b-2 border-[#2ef2ff] text-2xl text-center text-white pb-2 focus:outline-none mb-10"
-              />
-              <button onClick={handleAddItem} className="w-full py-4 neu-panel rounded-2xl text-[#2ef2ff] font-bold uppercase">Yaratish</button>
-          </div>
-      )}
-
+         )}
+      </div>
     </div>
   );
 }
