@@ -22,46 +22,57 @@ function App() {
   const [isTxModalOpen, setIsTxModalOpen] = useState(false);
   const [isWalletModalOpen, setIsWalletModalOpen] = useState(false);
   
-  // Tahrirlash uchun State
+  // Tahrirlash uchun
   const [editingTx, setEditingTx] = useState<Transaction | null>(null);
-  const [editingWallet, setEditingWallet] = useState<Wallet | null>(null); // MUHIM
+  const [editingWallet, setEditingWallet] = useState<Wallet | null>(null);
   
   const [detailTx, setDetailTx] = useState<Transaction | null>(null);
   const [contextMenu, setContextMenu] = useState<{ x: number, y: number, item: any, type: 'wallet' | 'tx' } | null>(null);
 
   useEffect(() => { saveData(data); }, [data]);
 
-  // Back Button
+  // --- XAVFSIZ BACK BUTTON (WEB & MOBILE) ---
   useEffect(() => {
-    CapacitorApp.addListener('backButton', () => {
+    const handleBack = () => {
+      // 1. Modallarni yopish
       if (isTxModalOpen || isWalletModalOpen || detailTx || contextMenu) {
          setIsTxModalOpen(false); setIsWalletModalOpen(false); setDetailTx(null); setContextMenu(null);
          return;
       }
+      // 2. Tarixga qaytish
       if (historyStack.length > 0) {
          const prev = historyStack[historyStack.length - 1];
          setHistoryStack(p => p.slice(0, -1)); setActiveTab(prev);
          return;
       }
+      // 3. Homega qaytish
       if (activeTab !== 'home') { setActiveTab('home'); return; }
-      CapacitorApp.exitApp();
-    });
+      
+      // 4. Chiqish (Faqat telefonda ishlaydi)
+      try { CapacitorApp.exitApp(); } catch (e) { console.log("Webda chiqish ishlamaydi"); }
+    };
+
+    // Listener qo'shish (Xatolikdan himoya)
+    let listener: any;
+    try {
+        listener = CapacitorApp.addListener('backButton', handleBack);
+    } catch (e) { console.warn("Capacitor topilmadi, web rejimdasisiz."); }
+
+    return () => { if(listener) listener.remove(); };
   }, [isTxModalOpen, isWalletModalOpen, detailTx, contextMenu, historyStack, activeTab]);
 
-  // --- HAMYON SAQLASH ---
+
+  // --- SAVE HANDLERS ---
   const handleWalletSave = (wallet: Wallet) => {
     if (editingWallet) {
-      // Tahrirlash
       setData({ ...data, wallets: data.wallets.map(w => w.id === wallet.id ? wallet : w) });
     } else {
-      // Yangi
       setData({ ...data, wallets: [...data.wallets, wallet] });
     }
     setIsWalletModalOpen(false);
     setEditingWallet(null);
   };
 
-  // --- TRANZAKSIYA SAQLASH ---
   const handleTransactionSave = (txData: Transaction) => {
     let newTx = [...data.transactions];
     let newW = [...data.wallets];
@@ -78,10 +89,10 @@ function App() {
     newW = newW.map(w => w.id === finalTx.walletId ? { ...w, balance: w.balance + (finalTx.type === 'income' ? finalTx.amount : -finalTx.amount) } : w);
 
     setData({ ...data, transactions: newTx, wallets: newW });
-    setIsTxModalOpen(false); setEditingTx(null);
+    setIsTxModalOpen(false); setEditingTx(null); setDetailTx(null);
   };
 
-  // O'chirish
+  // --- DELETE HANDLERS ---
   const handleDeleteTx = (id: string) => {
      const tx = data.transactions.find(t => t.id === id);
      if(!tx) return;
@@ -91,7 +102,7 @@ function App() {
   };
 
   const handleDeleteWallet = (id: string) => {
-      if(data.wallets.length <= 1) return;
+      if(data.wallets.length <= 1) { alert("Kamida bitta hamyon qolishi shart!"); return; }
       setData({ ...data, wallets: data.wallets.filter(w => w.id !== id), transactions: data.transactions.filter(t => t.walletId !== id) });
       setContextMenu(null);
   };
@@ -118,11 +129,13 @@ function App() {
         <div className="flex justify-between items-center px-6">
            <button onClick={() => setActiveTab('home')} className={`flex flex-col items-center ${activeTab === 'home' ? 'text-[#00d4ff]' : 'text-gray-600'}`}><Home size={24}/></button>
            <button onClick={() => setActiveTab('stats')} className={`flex flex-col items-center ${activeTab === 'stats' ? 'text-[#00d4ff]' : 'text-gray-600'}`}><BarChart2 size={24}/></button>
+           
            <div className="relative -top-6">
               <button onClick={() => { setEditingTx(null); setIsTxModalOpen(true); }} className="w-16 h-16 rounded-full bg-[#141e3c] border border-[#00d4ff]/50 text-[#00d4ff] flex items-center justify-center shadow-[0_0_20px_rgba(0,212,255,0.4)] active:scale-95 transition-transform">
                 <Plus size={32} strokeWidth={3} />
               </button>
            </div>
+           
            <button onClick={() => setActiveTab('budget')} className={`flex flex-col items-center ${activeTab === 'budget' ? 'text-[#00d4ff]' : 'text-gray-600'}`}><PieChart size={24}/></button>
            <button onClick={() => setActiveTab('ai')} className={`flex flex-col items-center ${activeTab === 'ai' ? 'text-[#00d4ff]' : 'text-gray-600'}`}><Sparkles size={24}/></button>
         </div>
@@ -132,27 +145,24 @@ function App() {
       {contextMenu && (
           <div className="absolute bg-[#141e3c] border border-white/10 rounded-2xl p-2 w-44 shadow-2xl z-[150] animate-slideUp" style={{ top: contextMenu.y - 100, left: Math.min(contextMenu.x - 20, window.innerWidth - 180) }} onClick={e => e.stopPropagation()}>
               <button onClick={() => { 
-                  // Tahrirlash bosilganda
                   if(contextMenu.type === 'tx') { setEditingTx(contextMenu.item); setIsTxModalOpen(true); }
                   if(contextMenu.type === 'wallet') { 
-                      setEditingWallet(contextMenu.item); // State yangilanadi
-                      setIsWalletModalOpen(true); // Modal ochiladi
+                      setEditingWallet(contextMenu.item); // MUHIM: Edit statega yozamiz
+                      setIsWalletModalOpen(true); // Modalni ochamiz
                   }
                   setContextMenu(null); 
               }} className="w-full text-left px-3 py-3 text-white text-sm font-bold hover:bg-white/5 rounded-xl">✏️ Tahrirlash</button>
-              
               <div className="h-[1px] bg-white/5 my-1"></div>
-              
               <button onClick={() => { if(contextMenu.type === 'tx') handleDeleteTx(contextMenu.item.id); else handleDeleteWallet(contextMenu.item.id); }} className="w-full text-left px-3 py-3 text-rose-500 text-sm font-bold hover:bg-rose-500/10 rounded-xl">🗑️ O'chirish</button>
           </div>
       )}
 
       {/* MODALLAR */}
       <WalletModal 
-        isOpen={isWalletModalOpen} 
-        onClose={() => { setIsWalletModalOpen(false); setEditingWallet(null); }} 
-        onSave={handleWalletSave} 
-        initialData={editingWallet} // MUHIM: Prop sifatida uzatildi
+         isOpen={isWalletModalOpen} 
+         onClose={() => { setIsWalletModalOpen(false); setEditingWallet(null); }} 
+         onSave={handleWalletSave} 
+         initialData={editingWallet} // PROP QO'SHILDI
       />
       
       <TransactionModal isOpen={isTxModalOpen} onClose={() => setIsTxModalOpen(false)} onSave={handleTransactionSave} categories={data.categories} wallets={data.wallets} initialData={editingTx} onAddCategory={(c) => setData({...data, categories: [...data.categories, c]})} onUpdateCategories={(u) => setData({...data, categories: u})} />
