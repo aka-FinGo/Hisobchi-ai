@@ -3,7 +3,6 @@ import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from 'recharts';
 import { Wallet, TrendingUp, TrendingDown, Layers, CreditCard, Plus } from 'lucide-react';
 import { Wallet as WalletType, Transaction, Category } from '../types';
 
-// Props ga onNavigate qo'shdik (App.tsx dan keladi)
 interface HomePageProps {
   data: {
     wallets: WalletType[];
@@ -33,12 +32,11 @@ export default function HomePage({ data, onNavigate }: HomePageProps) {
 
   const sortedTransactions = [...displayedTransactions]
     .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
-    .slice(0, 20); // Ko'proq tranzaksiya chiqaramiz
+    .slice(0, 20); 
 
   const getCategory = (id: string) => data.categories.find(c => c.id === id);
 
   return (
-    // SCROLLING: pb-32 bu menyu orqasida kontent qolib ketmasligi uchun
     <div className="h-full flex flex-col overflow-y-auto scrollbar-hide pt-safe px-6 pb-32">
       
       {/* Header */}
@@ -49,12 +47,11 @@ export default function HomePage({ data, onNavigate }: HomePageProps) {
             {totalBalance.toLocaleString()} <span className="text-sm text-orange-500">UZS</span>
           </h1>
         </div>
-        {/* Tepadagi Avatar -> Profilga o'tadi */}
         <button 
           onClick={() => onNavigate('profile')}
           className="w-12 h-12 rounded-full block-3d flex items-center justify-center p-1 active:scale-95 transition-transform"
         >
-           <img src={data.profile?.avatar || "https://api.dicebear.com/7.x/avataaars/svg?seed=Felix"} className="rounded-full" alt="Avatar"/>
+           <img src={data.profile?.avatar || "https://api.dicebear.com/7.x/avataaars/svg?seed=FinGo"} className="rounded-full" alt="Avatar"/>
         </button>
       </div>
 
@@ -74,13 +71,12 @@ export default function HomePage({ data, onNavigate }: HomePageProps) {
         </button>
       </div>
 
-      {/* --- DIAGRAMMA (Yangi 3D Ring bilan) --- */}
+      {/* --- DIAGRAMMA (3D Ring bilan) --- */}
       {viewMode === 'chart' && (
         <div className="flex justify-center mb-10 relative">
-           {/* Orqa fon nuri */}
-           <div className="absolute inset-0 bg-orange-500/10 blur-[60px] rounded-full pointer-events-none"></div>
+           <div className="absolute inset-0 bg-orange-500/5 blur-[50px] rounded-full pointer-events-none"></div>
 
-           {/* 2mm qalinlikdagi bo'rtma halqa */}
+           {/* 3D Halqa */}
            <div className="chart-ring-3d w-[280px] h-[280px] relative p-4">
               <ResponsiveContainer width="100%" height="100%">
                 <PieChart>
@@ -104,7 +100,6 @@ export default function HomePage({ data, onNavigate }: HomePageProps) {
                 </PieChart>
               </ResponsiveContainer>
               
-              {/* O'rtadagi ma'lumot */}
               <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
                 <p className="text-gray-600 text-[9px] font-bold uppercase tracking-widest">Mavjud</p>
                 <p className="text-xl font-black text-white">{totalBalance.toLocaleString()}</p>
@@ -114,7 +109,7 @@ export default function HomePage({ data, onNavigate }: HomePageProps) {
         </div>
       )}
 
-      {/* --- KARTALAR REJIMI --- */}
+      {/* --- KARTALAR --- */}
       {viewMode === 'cards' && (
         <div className="mb-8 overflow-x-auto pb-4 -mx-6 px-6 scrollbar-hide flex gap-4 snap-x">
              <button className="snap-center shrink-0 w-[60px] h-[160px] block-3d rounded-2xl flex items-center justify-center text-orange-500 active:scale-95">
