@@ -4,13 +4,21 @@
 
 @layer base {
   :root {
-    --bg: #0c0f14;
-    --panel: #161a22;
-    --neon: #2ef2ff;
+    /* CodePen'dan olingan asosiy ranglar */
+    --hue: 223;
+    --bg-dark: hsl(223, 10%, 15%);
+    --bg-darker: hsl(223, 10%, 10%);
+    --fg: hsl(223, 10%, 90%);
+    
+    /* Neon Ranglar */
+    --neon-blue: hsl(190, 100%, 50%);  /* Cyan */
+    --neon-purple: hsl(280, 100%, 60%);
+    --neon-green: hsl(123, 90%, 50%);
   }
+
   body {
-    background-color: var(--bg);
-    color: #cfd8dc;
+    background-image: linear-gradient(45deg, var(--bg-dark), var(--bg-darker));
+    color: var(--fg);
     font-family: 'Plus Jakarta Sans', sans-serif;
     overflow: hidden;
     height: 100vh;
@@ -18,40 +26,51 @@
 }
 
 @layer components {
-  /* 3D Panel (Knob style) */
-  .neu-panel {
-    background: var(--panel);
-    box-shadow: -4px -4px 8px rgba(255, 255, 255, 0.05), 4px 4px 10px rgba(0, 0, 0, 0.6);
-    border-radius: 20px;
-    border: 1px solid rgba(255,255,255,0.02);
-  }
-
-  .neu-pressed {
-    background: var(--panel);
-    box-shadow: inset 3px 3px 6px rgba(0, 0, 0, 0.8), inset -3px -3px 6px rgba(255, 255, 255, 0.05);
-    border: 1px solid rgba(0,0,0,0.2);
-  }
-
-  /* INGICHKA NEON (Siz so'ragan) */
-  .chart-ring-thin {
+  /* --- SWITCH 3D BASE (CodePen Style) --- */
+  .switch-base {
     border-radius: 50%;
-    background: var(--panel);
-    box-shadow: 0 10px 20px rgba(0,0,0,0.8), inset 0 2px 2px rgba(255,255,255,0.1);
-    /* 0.5px li juda ingichka chiziq */
-    border: 0.5px solid rgba(46, 242, 255, 0.4); 
+    /* Tashqi soya (qabariq effekt) */
+    box-shadow:
+      -4px -4px 8px hsl(223, 10%, 25%),
+      4px 4px 8px hsl(223, 10%, 5%),
+      inset 2px 2px 4px hsl(223, 10%, 5%),
+      inset -2px -2px 4px hsl(223, 10%, 20%);
+    background: linear-gradient(145deg, hsl(223, 10%, 15%), hsl(223, 10%, 12%));
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
   }
 
-  /* Animatsiyalar */
-  .slide-in-right { animation: slideRight 0.3s ease-out forwards; }
-  .slide-in-left { animation: slideLeft 0.3s ease-out forwards; }
-
-  @keyframes slideRight {
-    from { transform: translateX(100%); opacity: 0; }
-    to { transform: translateX(0); opacity: 1; }
+  /* Ichki Chuqurlik (Track) */
+  .switch-track {
+    border-radius: 50%;
+    box-shadow:
+      inset 4px 4px 8px hsl(223, 10%, 5%),
+      inset -4px -4px 8px hsl(223, 10%, 25%),
+      0 0 2px hsl(223, 10%, 15%);
+    background: hsl(223, 10%, 10%);
   }
-  @keyframes slideLeft {
-    from { transform: translateX(-100%); opacity: 0; }
-    to { transform: translateX(0); opacity: 1; }
+
+  /* --- NEON GLOW FILTERS --- */
+  .neon-glow-blue {
+    filter: drop-shadow(0 0 2px var(--neon-blue)) drop-shadow(0 0 5px var(--neon-blue));
+  }
+  .neon-glow-purple {
+    filter: drop-shadow(0 0 2px var(--neon-purple)) drop-shadow(0 0 5px var(--neon-purple));
+  }
+  .neon-text {
+    text-shadow: 0 0 8px currentColor;
+  }
+
+  /* Modal animatsiyasi */
+  .animate-slideUp {
+    animation: slideUp 0.3s cubic-bezier(0.65, 0, 0.35, 1) forwards;
+  }
+  
+  @keyframes slideUp {
+    from { transform: translateY(100%); opacity: 0; }
+    to { transform: translateY(0); opacity: 1; }
   }
 }
 
