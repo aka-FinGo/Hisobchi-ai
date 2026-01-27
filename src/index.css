@@ -4,8 +4,8 @@
 
 @layer base {
   :root {
-    --bg-dark: #0a0e17; /* HUD fon rangi */
-    --panel-dark: #141e3c; /* HUD Tooltip foni */
+    --bg-dark: #0a0e17;
+    --panel-dark: #141e3c;
     --neon-blue: #00d4ff;
     --neon-pink: #ff3366;
     --neon-purple: #bb86fc;
@@ -19,10 +19,29 @@
     user-select: none;
     -webkit-tap-highlight-color: transparent;
   }
+  
+  /* Silliq Scroll (Siz yuborgan example asosida) */
+  html {
+    scroll-behavior: smooth;
+  }
 }
 
 @layer components {
-  /* 3D Blok va Panellar uchun HUD stili */
+  /* HUD Tooltip (Eng tepada turishi shart!) */
+  .hud-tooltip {
+    background: rgba(20, 30, 60, 0.98); /* Deyarli shaffofmas */
+    border: 1px solid rgba(0, 212, 255, 0.3);
+    box-shadow: 0 10px 40px rgba(0,0,0,0.9);
+    border-radius: 12px;
+    padding: 12px;
+    color: white;
+    min-width: 160px;
+    /* MUHIM: Statistika tugmasidan baland bo'lishi kerak */
+    position: relative;
+    z-index: 100; 
+  }
+
+  /* 3D Blok va Panellar */
   .hud-panel {
     background: rgba(20, 30, 60, 0.4);
     backdrop-filter: blur(10px);
@@ -37,32 +56,12 @@
     border: 1px solid rgba(0, 212, 255, 0.2);
   }
 
-  /* Diagramma 3D Blok effekti uchun filtr (SVG ichida ishlatiladi) */
   .chart-3d-filter {
     filter: drop-shadow(3px 5px 2px rgba(0,0,0,0.8));
   }
   
-  /* Ingichka Neon Chiziq uchun Glow */
   .chart-neon-glow {
     filter: drop-shadow(0 0 4px currentColor);
-  }
-
-  /* HUD Tooltip (Qalqib chiquvchi oyna) */
-  .hud-tooltip {
-    background: rgba(20, 30, 60, 0.95);
-    border: 1px solid rgba(255, 255, 255, 0.1);
-    box-shadow: 0 8px 32px rgba(0,0,0,0.8);
-    border-radius: 12px;
-    padding: 12px;
-    color: white;
-    font-family: sans-serif;
-    min-width: 150px;
-    transform: translateY(-10px);
-  }
-
-  /* Scroll yechimi */
-  .scroll-container {
-    padding-bottom: 120px; /* Menu bar orqasida qolib ketmaslik uchun */
   }
 
   /* Animatsiyalar */
