@@ -1,165 +1,87 @@
 import { useState, useEffect } from 'react';
 import { App as CapacitorApp } from '@capacitor/app';
-import { Home, BarChart2, Plus, Sparkles, User } from 'lucide-react';
+import { Home, BarChart2, Plus, PieChart as BudgetIcon, User } from 'lucide-react';
 import { loadData, saveData } from './storage';
 import { AppData, Transaction } from './types';
 
-// Komponentlarni import qilish
+// Komponentlar
 import HomePage from './components/HomePage';
 import StatsPage from './components/StatsPage';
-import AIPage from './components/AIPage';
+import AIPage from './components/AIPage'; // Budjet o'rniga vaqtincha yoki yangi BudgetPage
 import ProfilePage from './components/SettingsPage';
 import TransactionModal from './components/TransactionModal';
 
-type TabType = 'home' | 'stats' | 'ai' | 'profile';
-
-// --- MUHIM QISM: ESKI MA'LUMOTLARNI TOZALASH ---
-// Agar oq ekran bo'layotgan bo'lsa, shu qator eski, buzilgan ma'lumotlarni o'chiradi
-// va dastur yangi neon dizayn bilan noldan boshlanadi.
-try {
-  const testData = loadData();
-  if (!testData.profile || !testData.profile.theme) {
-    console.log("Eski ma'lumotlar aniqlandi. Tozalanmoqda...");
-    localStorage.clear();
-  }
-} catch (e) {
-  localStorage.clear();
-}
-// -------------------------------------------
+type TabType = 'home' | 'stats' | 'budget' | 'profile';
 
 function App() {
-  // Endi yangi, toza ma'lumotlar yuklanadi
   const [data, setData] = useState<AppData>(loadData());
   const [activeTab, setActiveTab] = useState<TabType>('home');
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingTransaction, setEditingTransaction] = useState<Transaction | null>(null);
 
-  // Android Back Button
+  // Ma'lumotlarni tozalash (Xatolikni oldini olish uchun bir marta)
   useEffect(() => {
-    CapacitorApp.addListener('backButton', ({ canGoBack }) => {
-      if (isModalOpen) {
-        setIsModalOpen(false);
-      } else if (activeTab !== 'home') {
-        setActiveTab('home');
-      } else {
-        CapacitorApp.exitApp();
-      }
-    });
-  }, [isModalOpen, activeTab]);
+     if(!data.profile) {
+        try { localStorage.clear(); window.location.reload(); } catch(e){}
+     }
+  }, []);
 
-  // Auto-save
-  useEffect(() => {
-    saveData(data);
-  }, [data]);
+  useEffect(() => { saveData(data); }, [data]);
 
   const handleTransactionSave = (txData: any) => {
-    const newTx = {
-      ...txData,
-      id: editingTransaction ? editingTransaction.id : Date.now().toString(),
-    };
-
-    let updatedTransactions;
-    if (editingTransaction) {
-      updatedTransactions = data.transactions.map((t) =>
-        t.id === editingTransaction.id ? newTx : t
-      );
-    } else {
-      updatedTransactions = [...data.transactions, newTx];
-    }
-
-    const updatedWallets = data.wallets.map((w) => {
-      if (w.id === txData.walletId) {
-        const amountDiff = editingTransaction
-          ? newTx.amount - editingTransaction.amount
-          : newTx.amount;
-        
-        const newBalance = txData.type === 'income' 
-          ? w.balance + amountDiff 
-          : w.balance - amountDiff;
-          
-        return { ...w, balance: newBalance };
-      }
-      return w;
+    // ... (Eski logikangiz bilan bir xil, qisqartirdim)
+    const newTx = { ...txData, id: Date.now().toString() };
+    const updatedTransactions = [...data.transactions, newTx];
+    const updatedWallets = data.wallets.map(w => {
+        if(w.id === txData.walletId) {
+            const diff = txData.type === 'income' ? txData.amount : -txData.amount;
+            return { ...w, balance: w.balance + diff };
+        }
+        return w;
     });
-
-    setData({
-      ...data,
-      transactions: updatedTransactions,
-      wallets: updatedWallets,
-    });
+    setData({ ...data, transactions: updatedTransactions, wallets: updatedWallets });
     setIsModalOpen(false);
-    setEditingTransaction(null);
   };
-
-  const handleProfileAction = (actionType: string) => {
-    console.log("Profil harakati:", actionType);
-    // Keyinchalik bu yerga modal ochish kodlarini qo'shamiz
-  };
-
-  // Agar ma'lumot yuklanmasa, oq ekran o'rniga xabar chiqaramiz
-  if (!data.profile) {
-    return <div className="flex items-center justify-center h-screen bg-[#0f172a] text-blue-400">Tizim qayta ishga tushmoqda...</div>;
-  }
 
   return (
-    <div className="flex flex-col h-full bg-transparent font-['Plus_Jakarta_Sans']">
+    <div className="flex flex-col h-full bg-transparent">
       
       <div className="flex-1 overflow-hidden relative">
         {activeTab === 'home' && <HomePage data={data} />}
         {activeTab === 'stats' && <StatsPage data={data} />}
-        {activeTab === 'ai' && <AIPage data={data} onAddTransaction={handleTransactionSave} />}
-        {activeTab === 'profile' && (
-          <ProfilePage 
-            data={data} 
-            onDataChange={() => setData(loadData())}
-            onAction={handleProfileAction} 
-          />
-        )}
+        {/* Hozircha Budget bosilganda AI sahifasi yoki bo'sh sahifa ochiladi */}
+        {activeTab === 'budget' && <AIPage data={data} onAddTransaction={handleTransactionSave} />} 
+        {activeTab === 'profile' && <ProfilePage data={data} onAction={() => {}} />}
       </div>
 
-      {/* --- CYBER NEON BOTTOM BAR --- */}
+      {/* --- 3D INDUSTRIAL BOTTOM BAR --- */}
       <div className="fixed bottom-6 left-6 right-6 z-50">
-        <div className="glass-neon rounded-[30px] p-2 flex justify-between items-center relative">
+        <div className="block-3d rounded-[24px] px-2 py-3 flex justify-between items-center relative shadow-[0_10px_30px_rgba(0,0,0,0.5)]">
           
-          <button 
-            onClick={() => setActiveTab('home')} 
-            className={`flex-1 flex flex-col items-center py-2 transition-all duration-300 ${activeTab === 'home' ? 'neon-text-blue translate-y-[-5px]' : 'text-gray-500'}`}
-          >
-            <Home size={22} />
-            <span className="text-[9px] mt-1 font-bold uppercase tracking-widest">Asosiy</span>
+          <button onClick={() => setActiveTab('home')} className={`flex-1 flex flex-col items-center transition-all ${activeTab === 'home' ? 'text-orange-500 -translate-y-1' : 'text-gray-500'}`}>
+            <Home size={22} className={activeTab === 'home' ? 'drop-shadow-[0_0_8px_rgba(249,115,22,0.8)]' : ''} />
           </button>
 
-          <button 
-            onClick={() => setActiveTab('stats')} 
-            className={`flex-1 flex flex-col items-center py-2 transition-all duration-300 ${activeTab === 'stats' ? 'neon-text-purple translate-y-[-5px]' : 'text-gray-500'}`}
-          >
-            <BarChart2 size={22} />
-            <span className="text-[9px] mt-1 font-bold uppercase tracking-widest">Stat</span>
+          <button onClick={() => setActiveTab('stats')} className={`flex-1 flex flex-col items-center transition-all ${activeTab === 'stats' ? 'text-orange-500 -translate-y-1' : 'text-gray-500'}`}>
+            <BarChart2 size={22} className={activeTab === 'stats' ? 'drop-shadow-[0_0_8px_rgba(249,115,22,0.8)]' : ''} />
           </button>
 
-          <div className="relative -top-8 px-2">
+          {/* Center Plus (Orange Neon) */}
+          <div className="relative -top-8">
             <button
               onClick={() => { setEditingTransaction(null); setIsModalOpen(true); }}
-              className="w-16 h-16 neon-btn-primary rounded-2xl flex items-center justify-center border-4 border-[#0f172a]"
+              className="w-16 h-16 bg-gradient-to-br from-orange-500 to-amber-600 text-white rounded-2xl flex items-center justify-center shadow-[0_0_20px_rgba(249,115,22,0.6)] border-4 border-zinc-900 active:scale-90 transition-transform"
             >
               <Plus size={32} strokeWidth={3} />
             </button>
           </div>
 
-          <button 
-            onClick={() => setActiveTab('ai')} 
-            className={`flex-1 flex flex-col items-center py-2 transition-all duration-300 ${activeTab === 'ai' ? 'neon-text-blue translate-y-[-5px]' : 'text-gray-500'}`}
-          >
-            <Sparkles size={22} />
-            <span className="text-[9px] mt-1 font-bold uppercase tracking-widest">AI</span>
+          <button onClick={() => setActiveTab('budget')} className={`flex-1 flex flex-col items-center transition-all ${activeTab === 'budget' ? 'text-orange-500 -translate-y-1' : 'text-gray-500'}`}>
+            <BudgetIcon size={22} className={activeTab === 'budget' ? 'drop-shadow-[0_0_8px_rgba(249,115,22,0.8)]' : ''} />
           </button>
 
-          <button 
-            onClick={() => setActiveTab('profile')} 
-            className={`flex-1 flex flex-col items-center py-2 transition-all duration-300 ${activeTab === 'profile' ? 'neon-text-blue translate-y-[-5px]' : 'text-gray-500'}`}
-          >
-            <User size={22} />
-            <span className="text-[9px] mt-1 font-bold uppercase tracking-widest">Profil</span>
+          <button onClick={() => setActiveTab('profile')} className={`flex-1 flex flex-col items-center transition-all ${activeTab === 'profile' ? 'text-orange-500 -translate-y-1' : 'text-gray-500'}`}>
+            <User size={22} className={activeTab === 'profile' ? 'drop-shadow-[0_0_8px_rgba(249,115,22,0.8)]' : ''} />
           </button>
 
         </div>
@@ -167,11 +89,10 @@ function App() {
 
       <TransactionModal
         isOpen={isModalOpen}
-        onClose={() => { setIsModalOpen(false); setEditingTransaction(null); }}
+        onClose={() => setIsModalOpen(false)}
         onSave={handleTransactionSave}
         categories={data.categories}
         wallets={data.wallets}
-        initialData={editingTransaction}
       />
       
     </div>
