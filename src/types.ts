@@ -35,15 +35,14 @@ export interface Transaction {
   amount: number;
   walletId: string;
   type: TransactionType;
-  
-  // Ierarxiya
   categoryId: string;
   subCategoryId?: string;
-  childCategoryId?: string; // 3-daraja
-  
+  childCategoryId?: string;
   date: string;
   note?: string;
   location?: string; // Lokatsiya
+  // YANGI: Valyuta kursi (Agar USD bo'lsa)
+  exchangeRate?: number; 
 }
 
 export interface AppData {
