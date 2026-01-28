@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
-import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, LabelList } from 'recharts';
+import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, LabelList, Sector } from 'recharts';
 import { Wallet, Layers, Plus, RefreshCw } from 'lucide-react';
 import { Wallet as WalletType, Transaction, Category } from '../types';
 
@@ -14,11 +14,12 @@ interface HomePageProps {
   onTransactionClick: (tx: Transaction) => void;
   onContextMenu: (e: any, item: any, type: 'wallet' | 'tx') => void;
   onAddWallet: () => void;
-  onRefresh: () => void; // YANGI PROP
+  onRefresh: () => void;
 }
 
 const HUD_COLORS = ['#ff3366', '#00d4ff', '#bb86fc', '#00ff9d', '#ffbf00'];
 
+// --- CUSTOM TOOLTIP ---
 const CustomTooltip = ({ active, payload }: any) => {
   if (active && payload && payload.length) {
     const data = payload[0].payload;
@@ -41,22 +42,53 @@ const CustomTooltip = ({ active, payload }: any) => {
   return null;
 };
 
+// --- ACTIVE SHAPE (Tanishda kattalashish effekti) ---
+const renderActiveShape = (props: any) => {
+  const { cx, cy, innerRadius, outerRadius, startAngle, endAngle, fill } = props;
+  
+  return (
+    <g>
+      {/* Asosiy bo'lak (Kattalashtirilgan radius bilan) */}
+      <Sector
+        cx={cx}
+        cy={cy}
+        innerRadius={innerRadius}
+        outerRadius={outerRadius + 8} // +8px ga kattalashadi (Markazdan qochadi)
+        startAngle={startAngle}
+        endAngle={endAngle}
+        fill={fill}
+        className="filter drop-shadow-[0_0_8px_rgba(0,0,0,0.5)]" // Soya beramiz
+        cornerRadius={6}
+      />
+      {/* Yaltiroq effekt (ixtiyoriy) */}
+      <Sector
+        cx={cx}
+        cy={cy}
+        startAngle={startAngle}
+        endAngle={endAngle}
+        innerRadius={outerRadius + 4}
+        outerRadius={outerRadius + 6}
+        fill={fill}
+        opacity={0.5}
+        cornerRadius={10}
+      />
+    </g>
+  );
+};
+
 export default function HomePage({ data, onNavigate, onTransactionClick, onContextMenu, onAddWallet, onRefresh }: HomePageProps) {
   const [viewMode, setViewMode] = useState<'chart' | 'cards'>('chart');
   const [currentWalletIndex, setCurrentWalletIndex] = useState(0);
-  
-  // Diagramma uchun State
-  const [activeIndex, setActiveIndex] = useState<number | null>(null);
+  const [activeIndex, setActiveIndex] = useState<number | undefined>(undefined); // Diagramma uchun
 
-  // Swipe & Pull-to-Refresh
+  // Pull-to-Refresh & Swipe States
   const touchStartX = useRef(0);
-  const touchStartY = useRef(0); // Y o'qi (Vertikal)
-  const [pullY, setPullY] = useState(0); // Qancha pastga tortildi
+  const touchStartY = useRef(0);
+  const [pullY, setPullY] = useState(0);
   const [isRefreshing, setIsRefreshing] = useState(false);
-  
   const [animClass, setAnimClass] = useState('');
 
-  // Safety Check
+  // Safety
   useEffect(() => {
     if (currentWalletIndex >= data.wallets.length) setCurrentWalletIndex(0);
   }, [data.wallets.length]);
@@ -82,41 +114,22 @@ export default function HomePage({ data, onNavigate, onTransactionClick, onConte
   const sortedTransactions = [...displayedTransactions].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
   const getCategory = (id: string) => data.categories.find(c => c.id === id);
 
-  // --- TOUCH HANDLERS (Swipe + Pull) ---
+  // --- HANDLERS ---
   const handleTouchStart = (e: React.TouchEvent) => {
      touchStartX.current = e.targetTouches[0].clientX;
      touchStartY.current = e.targetTouches[0].clientY;
   };
-
   const handleTouchMove = (e: React.TouchEvent) => {
-     const currentY = e.targetTouches[0].clientY;
-     const diffY = currentY - touchStartY.current;
-     
-     // Faqat sahifa tepasida bo'lsa va pastga tortilsa
-     const scrollTop = e.currentTarget.scrollTop;
-     if (scrollTop === 0 && diffY > 0) {
-        setPullY(diffY); // Pull animatsiyasi uchun
-     }
+     const diffY = e.targetTouches[0].clientY - touchStartY.current;
+     if (e.currentTarget.scrollTop === 0 && diffY > 0) setPullY(diffY);
   };
-
   const handleTouchEnd = (e: React.TouchEvent) => {
-    const touchEndX = e.changedTouches[0].clientX;
-    const diffX = touchStartX.current - touchEndX;
-    
-    // 1. PULL TO REFRESH LOGIC
-    if (pullY > 100) { // Agar 100px dan ko'p tortilsa
-       setIsRefreshing(true);
-       setPullY(50); // Loading holatida qotib turish
-       setTimeout(() => {
-          onRefresh(); // Ma'lumotni yangilash
-          setIsRefreshing(false);
-          setPullY(0); // Joyiga qaytish
-       }, 1000);
-    } else {
-       setPullY(0);
-    }
+    const diffX = touchStartX.current - e.changedTouches[0].clientX;
+    if (pullY > 100) {
+       setIsRefreshing(true); setPullY(50);
+       setTimeout(() => { onRefresh(); setIsRefreshing(false); setPullY(0); }, 1000);
+    } else { setPullY(0); }
 
-    // 2. SWIPE LOGIC (Agar pull bo'lmasa)
     if (pullY < 50) {
         if (diffX > 50) { 
             if (viewMode === 'chart') { setAnimClass('slide-in-right'); setViewMode('cards'); }
@@ -135,20 +148,11 @@ export default function HomePage({ data, onNavigate, onTransactionClick, onConte
   return (
     <div 
         className="h-full flex flex-col overflow-y-auto pt-safe px-4 pb-48 relative transition-transform duration-300"
-        style={{ transform: `translateY(${pullY > 0 ? Math.min(pullY, 150) / 2 : 0}px)` }} // Pull effekti
-        onTouchStart={handleTouchStart} 
-        onTouchMove={handleTouchMove} 
-        onTouchEnd={handleTouchEnd}
-        // MUHIM: Bo'sh joyga bosganda Tooltip yopiladi
-        onClick={() => setActiveIndex(null)} 
+        style={{ transform: `translateY(${pullY > 0 ? Math.min(pullY, 150) / 2 : 0}px)` }} 
+        onTouchStart={handleTouchStart} onTouchMove={handleTouchMove} onTouchEnd={handleTouchEnd}
+        onClick={() => setActiveIndex(undefined)} // Bo'sh joy bosilganda reset
     >
-      
-      {/* PULL INDICATOR */}
-      {pullY > 0 && (
-          <div className="absolute top-[-40px] left-0 right-0 flex justify-center items-center h-10">
-              <RefreshCw className={`text-[#00d4ff] ${isRefreshing ? 'animate-spin' : ''}`} size={24}/>
-          </div>
-      )}
+      {pullY > 0 && (<div className="absolute top-[-40px] left-0 right-0 flex justify-center items-center h-10"><RefreshCw className={`text-[#00d4ff] ${isRefreshing ? 'animate-spin' : ''}`} size={24}/></div>)}
 
       {/* HEADER */}
       <div className="flex justify-between items-start py-6 px-2">
@@ -157,24 +161,35 @@ export default function HomePage({ data, onNavigate, onTransactionClick, onConte
           <h1 className="text-3xl font-bold text-white tracking-wider chart-neon-glow">{totalUZS.toLocaleString()} <span className="text-sm text-[#00d4ff]">UZS</span></h1>
           <h2 className="text-xl font-bold text-[#bb86fc] mt-1 chart-neon-glow">{totalUSD.toLocaleString()} <span className="text-sm text-gray-500">$</span></h2>
         </div>
-        <button onClick={() => onNavigate('profile')} className="w-12 h-12 rounded-full hud-panel flex items-center justify-center active:scale-95 border border-white/10">
-           <img src={data.profile?.avatar} className="rounded-full w-10 h-10 opacity-90"/>
-        </button>
+        <button onClick={() => onNavigate('profile')} className="w-12 h-12 rounded-full hud-panel flex items-center justify-center active:scale-95 border border-white/10"><img src={data.profile?.avatar} className="rounded-full w-10 h-10 opacity-90"/></button>
       </div>
 
       <div className={`flex-1 ${animClass}`}>
           {viewMode === 'chart' && (
-            <div className="flex justify-center mb-8 relative">
-               <div className="w-[300px] h-[300px] relative">
+            <div className="flex justify-center mb-8 relative pt-4">
+               
+               {/* 3D Container (Qalin va bo'rtib chiqqan) */}
+               <div className="w-[300px] h-[300px] relative chart-3d-wrapper flex items-center justify-center">
+                  
+                  {/* Chart Ichki Soya */}
+                  <div className="chart-inner-shadow"></div>
+
                   <ResponsiveContainer width="100%" height="100%">
                     <PieChart>
-                      {/* TASHQI 3D HALQA (Foizlar bilan) */}
+                      {/* TASHQI 3D HALQA */}
                       <Pie 
-                        data={chartData} innerRadius={90} outerRadius={115} paddingAngle={6} cornerRadius={6} dataKey="value" stroke="none" 
+                        activeIndex={activeIndex} // State
+                        activeShape={renderActiveShape} // Custom Shape (Kattalashish uchun)
+                        data={chartData} 
+                        innerRadius={90} 
+                        outerRadius={115} 
+                        paddingAngle={6} 
+                        cornerRadius={6} 
+                        dataKey="value" 
+                        stroke="none" 
                         onClick={(entry, index, e) => {
-                            e.stopPropagation(); // Chart bosilganda yopilib qolmasligi uchun
-                            setActiveIndex(index);
-                            // Agar shu bo'lakka ikki marta bosilsa -> Hamyonga o'tish
+                            e.stopPropagation();
+                            setActiveIndex(index); // Tanlash
                             if (activeIndex === index) {
                                 const wIndex = data.wallets.findIndex(w => w.id === entry.id);
                                 if(wIndex >= 0) { setCurrentWalletIndex(wIndex); setAnimClass('slide-in-right'); setViewMode('cards'); }
@@ -182,35 +197,36 @@ export default function HomePage({ data, onNavigate, onTransactionClick, onConte
                         }}
                       >
                         {chartData.map((e, i) => (
-                           <Cell key={i} fill={e.fill} className={`chart-3d-filter cursor-pointer transition-all ${activeIndex === i ? 'opacity-100 scale-105' : 'hover:opacity-80'}`}/>
+                           <Cell key={i} fill={e.fill} className="cursor-pointer"/>
                         ))}
-                        {/* FOIZLARNI KO'RSATISH */}
+                        
+                        {/* FOIZLAR (Label List) */}
                         <LabelList 
                             dataKey="percent" 
                             position="outside" 
-                            offset={15}
-                            formatter={(val: number) => val > 2 ? `${val}%` : ''} // Kichik foizlarni ko'rsatmaslik
-                            style={{ fill: '#fff', fontSize: '12px', fontWeight: 'bold', textShadow: '0 0 5px black' }}
+                            offset={20}
+                            formatter={(val: number) => val > 2 ? `${val}%` : ''}
+                            style={{ fill: '#fff', fontSize: '11px', fontWeight: 'bold', textShadow: '0 0 5px black' }}
                         />
                       </Pie>
 
-                      {/* ICHKI NEON CHIZIQ */}
+                      {/* ICHKI NEON CHIZIQ (Doimiy) */}
                       <Pie data={chartData} innerRadius={82} outerRadius={84} dataKey="value" stroke="none" isAnimationActive={false}>
                         {chartData.map((e, i) => <Cell key={i} fill={e.fill} className="chart-neon-glow"/>)}
                       </Pie>
                       
-                      {/* CUSTOM CONTROLLED TOOLTIP */}
+                      {/* Tooltip */}
                       <Tooltip 
                         content={<CustomTooltip />} 
-                        active={typeof activeIndex === 'number'} // Faqat tanlanganda chiqadi
-                        position={{ x: 75, y: 120 }} // Markazga yaqin joyda chiqadi
+                        active={typeof activeIndex === 'number'} 
+                        position={{ x: 75, y: 120 }} 
                         wrapperStyle={{ zIndex: 1000, pointerEvents: 'none' }} 
                       />
                     </PieChart>
                   </ResponsiveContainer>
                   
-                  {/* Markaziy Tugma (Z-Index pastda) */}
-                  <button onClick={(e) => { e.stopPropagation(); onNavigate('stats'); }} className="absolute inset-0 m-auto w-32 h-32 rounded-full hud-pressed flex flex-col items-center justify-center active:scale-95 z-10 border border-[#00d4ff]/20">
+                  {/* Markaziy Tugma */}
+                  <button onClick={(e) => { e.stopPropagation(); onNavigate('stats'); }} className="absolute m-auto w-32 h-32 rounded-full hud-pressed flex flex-col items-center justify-center active:scale-95 z-10 border border-[#00d4ff]/20">
                     <Layers size={28} className="text-[#00d4ff] mb-2 drop-shadow-[0_0_5px_#00d4ff]"/>
                     <p className="text-[10px] text-gray-400 font-bold uppercase">Statistika</p>
                   </button>
@@ -218,6 +234,7 @@ export default function HomePage({ data, onNavigate, onTransactionClick, onConte
             </div>
           )}
 
+          {/* CARDS VIEW */}
           {viewMode === 'cards' && activeWallet && (
             <div className="mb-8 px-2 animate-slideUp">
                 <div className="flex justify-between items-center mb-4">
