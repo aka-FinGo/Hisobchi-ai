@@ -3,8 +3,10 @@ import { CapacitorConfig } from '@capacitor/cli';
 const config: CapacitorConfig = {
   appId: 'com.aka.fingo.hisobchi', // O'zingizga moslang
   appName: 'Hisobchi AI',
-  webDir: 'dist', // 'www' emas, aynan 'dist' bo'lishi kerak
-  bundledWebRuntime: false
+  webDir: 'dist', // <--- MUHIM: 'dist' bo'lishi kerak ('build' yoki 'public' emas)
+  server: {
+    androidScheme: 'https'
+  }
 };
 
 export default config;
