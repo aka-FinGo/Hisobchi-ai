@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { App as CapacitorApp } from '@capacitor/app';
 import { Home, BarChart2, Plus, PieChart, Sparkles } from 'lucide-react';
 import { loadData, saveData } from './storage';
-import { AppData, Transaction, Wallet } from './types';
+import { AppData, Transaction, Wallet, FilterState } from './types';
 
 import HomePage from './components/HomePage';
 import TransactionModal from './components/TransactionModal';
@@ -26,9 +26,12 @@ function App() {
   const [detailTx, setDetailTx] = useState<Transaction | null>(null);
   const [contextMenu, setContextMenu] = useState<{ x: number, y: number, item: any, type: 'wallet' | 'tx' } | null>(null);
 
+  // YANGI: Filter State
+  const [statsFilter, setStatsFilter] = useState<FilterState | null>(null);
+
   useEffect(() => { saveData(data); }, [data]);
 
-  // Back Button Logic
+  // Back Button
   useEffect(() => {
     CapacitorApp.addListener('backButton', () => {
       if (isTxModalOpen || isWalletModalOpen || detailTx || contextMenu) {
@@ -45,7 +48,7 @@ function App() {
     });
   }, [isTxModalOpen, isWalletModalOpen, detailTx, contextMenu, historyStack, activeTab]);
 
-  // Handlers (Save/Delete)
+  // --- Handlers ---
   const refreshData = () => { setData(loadData()); };
 
   const handleWalletSave = (wallet: Wallet) => {
@@ -85,11 +88,15 @@ function App() {
       setContextMenu(null);
   };
 
+  // YANGI: Filterga o'tish funksiyasi
+  const handleJumpToFilter = (filter: FilterState) => {
+    setStatsFilter(filter);
+    setDetailTx(null);
+    setActiveTab('stats');
+  };
+
   return (
-    // H-SCREEN va FLEX-COL scroll ishlashi uchun shart
     <div className="flex flex-col h-screen w-full bg-[#0a0e17] font-['Plus_Jakarta_Sans'] select-none text-[#e0e0ff]" onClick={() => setContextMenu(null)}>
-      
-      {/* ASOSIY SCROLL ZONA */}
       <div className="flex-1 overflow-hidden relative">
         <div className="h-full w-full">
           {activeTab === 'home' && (
@@ -102,12 +109,18 @@ function App() {
                   onRefresh={refreshData}
               />
           )}
-          {activeTab === 'stats' && <StatsPage data={data} />}
+          {activeTab === 'stats' && (
+              <StatsPage 
+                data={data} 
+                initialFilter={statsFilter} // Filterni uzatish
+                onClearFilter={() => setStatsFilter(null)} 
+              />
+          )}
           {activeTab === 'ai' && <AIPage data={data} onAddTransaction={handleTransactionSave} />} 
         </div>
       </div>
 
-      {/* MENU BAR (Fixed Bottom) */}
+      {/* Menu Bar */}
       <div className="fixed bottom-0 left-0 right-0 z-50 bg-[#0a0e17]/90 backdrop-blur-xl pb-5 pt-3 border-t border-white/5">
         <div className="flex justify-between items-center px-6">
            <button onClick={() => setActiveTab('home')} className={`flex flex-col items-center ${activeTab === 'home' ? 'text-[#00d4ff]' : 'text-gray-600'}`}><Home size={24}/></button>
@@ -122,25 +135,30 @@ function App() {
         </div>
       </div>
 
-      {/* CONTEXT MENU */}
+      {/* Modals & Menus */}
       {contextMenu && (
           <div className="absolute bg-[#141e3c] border border-white/10 rounded-2xl p-2 w-44 shadow-2xl z-[150] animate-slideUp" style={{ top: contextMenu.y - 100, left: Math.min(contextMenu.x - 20, window.innerWidth - 180) }} onClick={e => e.stopPropagation()}>
-              <button onClick={() => { 
-                  if(contextMenu.type === 'tx') { setEditingTx(contextMenu.item); setIsTxModalOpen(true); }
-                  if(contextMenu.type === 'wallet') { setEditingWallet(contextMenu.item); setIsWalletModalOpen(true); }
-                  setContextMenu(null); 
-              }} className="w-full text-left px-3 py-3 text-white text-sm font-bold hover:bg-white/5 rounded-xl">✏️ Tahrirlash</button>
+              <button onClick={() => { if(contextMenu.type === 'tx') { setEditingTx(contextMenu.item); setIsTxModalOpen(true); } if(contextMenu.type === 'wallet') { setEditingWallet(contextMenu.item); setIsWalletModalOpen(true); } setContextMenu(null); }} className="w-full text-left px-3 py-3 text-white text-sm font-bold hover:bg-white/5 rounded-xl">✏️ Tahrirlash</button>
               <div className="h-[1px] bg-white/5 my-1"></div>
               <button onClick={() => { if(contextMenu.type === 'tx') handleDeleteTx(contextMenu.item.id); else handleDeleteWallet(contextMenu.item.id); }} className="w-full text-left px-3 py-3 text-rose-500 text-sm font-bold hover:bg-rose-500/10 rounded-xl">🗑️ O'chirish</button>
           </div>
       )}
 
-      {/* MODALLAR */}
       <WalletModal isOpen={isWalletModalOpen} onClose={() => { setIsWalletModalOpen(false); setEditingWallet(null); }} onSave={handleWalletSave} initialData={editingWallet} />
       <TransactionModal isOpen={isTxModalOpen} onClose={() => setIsTxModalOpen(false)} onSave={handleTransactionSave} categories={data.categories} wallets={data.wallets} initialData={editingTx} onAddCategory={(c) => setData({...data, categories: [...data.categories, c]})} onUpdateCategories={(u) => setData({...data, categories: u})} />
-      <TransactionDetailModal isOpen={!!detailTx} onClose={() => setDetailTx(null)} transaction={detailTx} category={data.categories.find(c => c.id === detailTx?.categoryId)} wallet={data.wallets.find(w => w.id === detailTx?.walletId)} onEdit={(tx) => { setDetailTx(null); setEditingTx(tx); setIsTxModalOpen(true); }} onDelete={handleDeleteTx} />
+      
+      {/* Detail Modal Yangilandi */}
+      <TransactionDetailModal 
+        isOpen={!!detailTx} 
+        onClose={() => setDetailTx(null)} 
+        transaction={detailTx} 
+        category={data.categories.find(c => c.id === detailTx?.categoryId)} 
+        wallet={data.wallets.find(w => w.id === detailTx?.walletId)} 
+        onEdit={(tx) => { setDetailTx(null); setEditingTx(tx); setIsTxModalOpen(true); }} 
+        onDelete={handleDeleteTx}
+        onFilter={handleJumpToFilter} // YANGI PROP
+      />
     </div>
   );
 }
-
 export default App;
