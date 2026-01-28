@@ -26,12 +26,12 @@ function App() {
   const [detailTx, setDetailTx] = useState<Transaction | null>(null);
   const [contextMenu, setContextMenu] = useState<{ x: number, y: number, item: any, type: 'wallet' | 'tx' } | null>(null);
 
-  // YANGI: Filter State
+  // Filter State
   const [statsFilter, setStatsFilter] = useState<FilterState | null>(null);
 
   useEffect(() => { saveData(data); }, [data]);
 
-  // Back Button
+  // Back Button Logic
   useEffect(() => {
     CapacitorApp.addListener('backButton', () => {
       if (isTxModalOpen || isWalletModalOpen || detailTx || contextMenu) {
@@ -48,7 +48,7 @@ function App() {
     });
   }, [isTxModalOpen, isWalletModalOpen, detailTx, contextMenu, historyStack, activeTab]);
 
-  // --- Handlers ---
+  // Handlers...
   const refreshData = () => { setData(loadData()); };
 
   const handleWalletSave = (wallet: Wallet) => {
@@ -88,7 +88,6 @@ function App() {
       setContextMenu(null);
   };
 
-  // YANGI: Filterga o'tish funksiyasi
   const handleJumpToFilter = (filter: FilterState) => {
     setStatsFilter(filter);
     setDetailTx(null);
@@ -112,15 +111,15 @@ function App() {
           {activeTab === 'stats' && (
               <StatsPage 
                 data={data} 
-                initialFilter={statsFilter} // Filterni uzatish
-                onClearFilter={() => setStatsFilter(null)} 
+                initialFilter={statsFilter} 
+                onClearFilter={() => setStatsFilter(null)}
+                onTxClick={setDetailTx} // YANGI: Amal bosilganda DetailModal ochiladi
               />
           )}
           {activeTab === 'ai' && <AIPage data={data} onAddTransaction={handleTransactionSave} />} 
         </div>
       </div>
 
-      {/* Menu Bar */}
       <div className="fixed bottom-0 left-0 right-0 z-50 bg-[#0a0e17]/90 backdrop-blur-xl pb-5 pt-3 border-t border-white/5">
         <div className="flex justify-between items-center px-6">
            <button onClick={() => setActiveTab('home')} className={`flex flex-col items-center ${activeTab === 'home' ? 'text-[#00d4ff]' : 'text-gray-600'}`}><Home size={24}/></button>
@@ -135,7 +134,7 @@ function App() {
         </div>
       </div>
 
-      {/* Modals & Menus */}
+      {/* Modallar */}
       {contextMenu && (
           <div className="absolute bg-[#141e3c] border border-white/10 rounded-2xl p-2 w-44 shadow-2xl z-[150] animate-slideUp" style={{ top: contextMenu.y - 100, left: Math.min(contextMenu.x - 20, window.innerWidth - 180) }} onClick={e => e.stopPropagation()}>
               <button onClick={() => { if(contextMenu.type === 'tx') { setEditingTx(contextMenu.item); setIsTxModalOpen(true); } if(contextMenu.type === 'wallet') { setEditingWallet(contextMenu.item); setIsWalletModalOpen(true); } setContextMenu(null); }} className="w-full text-left px-3 py-3 text-white text-sm font-bold hover:bg-white/5 rounded-xl">✏️ Tahrirlash</button>
@@ -147,7 +146,6 @@ function App() {
       <WalletModal isOpen={isWalletModalOpen} onClose={() => { setIsWalletModalOpen(false); setEditingWallet(null); }} onSave={handleWalletSave} initialData={editingWallet} />
       <TransactionModal isOpen={isTxModalOpen} onClose={() => setIsTxModalOpen(false)} onSave={handleTransactionSave} categories={data.categories} wallets={data.wallets} initialData={editingTx} onAddCategory={(c) => setData({...data, categories: [...data.categories, c]})} onUpdateCategories={(u) => setData({...data, categories: u})} />
       
-      {/* Detail Modal Yangilandi */}
       <TransactionDetailModal 
         isOpen={!!detailTx} 
         onClose={() => setDetailTx(null)} 
@@ -156,7 +154,7 @@ function App() {
         wallet={data.wallets.find(w => w.id === detailTx?.walletId)} 
         onEdit={(tx) => { setDetailTx(null); setEditingTx(tx); setIsTxModalOpen(true); }} 
         onDelete={handleDeleteTx}
-        onFilter={handleJumpToFilter} // YANGI PROP
+        onFilter={handleJumpToFilter} 
       />
     </div>
   );
