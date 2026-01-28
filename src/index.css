@@ -10,12 +10,6 @@
     --neon-pink: #ff3366;
     --neon-purple: #bb86fc;
   }
-  html, body, #root {
-    height: 100%; /* MUHIM: Ekranni to'ldirish uchun */
-    width: 100%;
-    margin: 0;
-    padding: 0;
-  }
   body {
     background-color: var(--bg-dark);
     color: #e0e0ff;
@@ -25,29 +19,52 @@
     user-select: none;
     -webkit-tap-highlight-color: transparent;
   }
-  
-  /* Silliq Scroll (Siz yuborgan example asosida) */
-  html {
-    scroll-behavior: smooth;
-  }
+  html { scroll-behavior: smooth; }
 }
 
 @layer components {
-  /* HUD Tooltip (Eng tepada turishi shart!) */
+  /* --- 3D CHART CONTAINER (YANGI) --- */
+  .chart-3d-wrapper {
+    position: relative;
+    border-radius: 50%;
+    /* Qalinlik berish uchun murakkab soyalar */
+    background: linear-gradient(145deg, #101624, #080b12);
+    box-shadow: 
+      /* Tashqi qora soya (ko'tarilib turish uchun) */
+      0 20px 40px rgba(0,0,0,0.8),
+      /* Ichki yorug'lik (qirrasi bilinishi uchun) */
+      inset 1px 1px 2px rgba(255,255,255,0.05),
+      /* Ichki chuqurlik */
+      inset 0 0 30px rgba(0,0,0,0.9);
+    
+    /* Halqa qirrasi (Bezel) */
+    border: 4px solid #1e2a44;
+  }
+  
+  /* Halqaning ichki qismi (teshigi) uchun soya */
+  .chart-inner-shadow {
+    position: absolute;
+    inset: 40px; /* Qanchalik ichkarida ekanligi */
+    border-radius: 50%;
+    box-shadow: inset 0 10px 20px rgba(0,0,0,0.9);
+    pointer-events: none; /* Bosishga xalaqit bermasin */
+    z-index: 0;
+  }
+
+  /* HUD Tooltip */
   .hud-tooltip {
-    background: rgba(20, 30, 60, 0.98); /* Deyarli shaffofmas */
+    background: rgba(20, 30, 60, 0.98);
     border: 1px solid rgba(0, 212, 255, 0.3);
     box-shadow: 0 10px 40px rgba(0,0,0,0.9);
     border-radius: 12px;
     padding: 12px;
     color: white;
     min-width: 160px;
-    /* MUHIM: Statistika tugmasidan baland bo'lishi kerak */
     position: relative;
     z-index: 100; 
   }
 
-  /* 3D Blok va Panellar */
+  /* Eski panellar */
   .hud-panel {
     background: rgba(20, 30, 60, 0.4);
     backdrop-filter: blur(10px);
@@ -55,24 +72,18 @@
     box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
     border-radius: 20px;
   }
-
+  
   .hud-pressed {
     background: rgba(20, 30, 60, 0.8);
     box-shadow: inset 0 0 15px rgba(0, 0, 0, 0.8);
     border: 1px solid rgba(0, 212, 255, 0.2);
   }
 
-  .chart-3d-filter {
-    filter: drop-shadow(3px 5px 2px rgba(0,0,0,0.8));
-  }
+  .chart-neon-glow { filter: drop-shadow(0 0 4px currentColor); }
   
-  .chart-neon-glow {
-    filter: drop-shadow(0 0 4px currentColor);
-  }
-
-  /* Animatsiyalar */
   .slide-in-right { animation: slideRight 0.3s ease-out forwards; }
   .slide-in-left { animation: slideLeft 0.3s ease-out forwards; }
+  
   @keyframes slideRight { from { transform: translateX(100%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
   @keyframes slideLeft { from { transform: translateX(-100%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
 }
