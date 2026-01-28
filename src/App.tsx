@@ -21,62 +21,51 @@ function App() {
   // Modallar
   const [isTxModalOpen, setIsTxModalOpen] = useState(false);
   const [isWalletModalOpen, setIsWalletModalOpen] = useState(false);
-  
-  // Tahrirlash uchun
   const [editingTx, setEditingTx] = useState<Transaction | null>(null);
-  const [editingWallet, setEditingWallet] = useState<Wallet | null>(null);
-  
   const [detailTx, setDetailTx] = useState<Transaction | null>(null);
+  const [editingWallet, setEditingWallet] = useState<Wallet | null>(null);
   const [contextMenu, setContextMenu] = useState<{ x: number, y: number, item: any, type: 'wallet' | 'tx' } | null>(null);
+
+  // --- YANGILASH FUNKSIYASI (Pull-to-Refresh uchun) ---
+  const refreshData = () => {
+    // LocalStorage dan ma'lumotni qayta o'qiymiz
+    const freshData = loadData();
+    setData(freshData);
+    // Agar server bo'lganda, shu yerda API request bo'lardi
+  };
 
   useEffect(() => { saveData(data); }, [data]);
 
-  // --- XAVFSIZ BACK BUTTON (WEB & MOBILE) ---
+  // Back Button Logic
   useEffect(() => {
-    const handleBack = () => {
-      // 1. Modallarni yopish
+    CapacitorApp.addListener('backButton', () => {
       if (isTxModalOpen || isWalletModalOpen || detailTx || contextMenu) {
          setIsTxModalOpen(false); setIsWalletModalOpen(false); setDetailTx(null); setContextMenu(null);
          return;
       }
-      // 2. Tarixga qaytish
       if (historyStack.length > 0) {
          const prev = historyStack[historyStack.length - 1];
          setHistoryStack(p => p.slice(0, -1)); setActiveTab(prev);
          return;
       }
-      // 3. Homega qaytish
       if (activeTab !== 'home') { setActiveTab('home'); return; }
-      
-      // 4. Chiqish (Faqat telefonda ishlaydi)
-      try { CapacitorApp.exitApp(); } catch (e) { console.log("Webda chiqish ishlamaydi"); }
-    };
-
-    // Listener qo'shish (Xatolikdan himoya)
-    let listener: any;
-    try {
-        listener = CapacitorApp.addListener('backButton', handleBack);
-    } catch (e) { console.warn("Capacitor topilmadi, web rejimdasisiz."); }
-
-    return () => { if(listener) listener.remove(); };
+      CapacitorApp.exitApp();
+    });
   }, [isTxModalOpen, isWalletModalOpen, detailTx, contextMenu, historyStack, activeTab]);
 
-
-  // --- SAVE HANDLERS ---
+  // Save Handlers...
   const handleWalletSave = (wallet: Wallet) => {
     if (editingWallet) {
       setData({ ...data, wallets: data.wallets.map(w => w.id === wallet.id ? wallet : w) });
     } else {
       setData({ ...data, wallets: [...data.wallets, wallet] });
     }
-    setIsWalletModalOpen(false);
-    setEditingWallet(null);
+    setIsWalletModalOpen(false); setEditingWallet(null);
   };
 
   const handleTransactionSave = (txData: Transaction) => {
     let newTx = [...data.transactions];
     let newW = [...data.wallets];
-
     if (editingTx) { 
        const old = data.transactions.find(t => t.id === editingTx.id);
        if(old) {
@@ -87,12 +76,10 @@ function App() {
     const finalTx = { ...txData, id: txData.id || Date.now().toString() };
     newTx.push(finalTx);
     newW = newW.map(w => w.id === finalTx.walletId ? { ...w, balance: w.balance + (finalTx.type === 'income' ? finalTx.amount : -finalTx.amount) } : w);
-
     setData({ ...data, transactions: newTx, wallets: newW });
     setIsTxModalOpen(false); setEditingTx(null); setDetailTx(null);
   };
 
-  // --- DELETE HANDLERS ---
   const handleDeleteTx = (id: string) => {
      const tx = data.transactions.find(t => t.id === id);
      if(!tx) return;
@@ -102,14 +89,13 @@ function App() {
   };
 
   const handleDeleteWallet = (id: string) => {
-      if(data.wallets.length <= 1) { alert("Kamida bitta hamyon qolishi shart!"); return; }
+      if(data.wallets.length <= 1) return;
       setData({ ...data, wallets: data.wallets.filter(w => w.id !== id), transactions: data.transactions.filter(t => t.walletId !== id) });
       setContextMenu(null);
   };
 
   return (
     <div className="flex flex-col h-full bg-[#0a0e17] font-['Plus_Jakarta_Sans'] select-none text-[#e0e0ff]" onClick={() => setContextMenu(null)}>
-      
       <div className="flex-1 overflow-hidden relative">
         {activeTab === 'home' && (
             <HomePage 
@@ -118,38 +104,32 @@ function App() {
                 onTransactionClick={setDetailTx}
                 onContextMenu={(e, i, t) => setContextMenu({ x: e.clientX, y: e.clientY, item: i, type: t })}
                 onAddWallet={() => { setEditingWallet(null); setIsWalletModalOpen(true); }}
+                onRefresh={refreshData} // YANGI: Refresh funksiyasi uzatildi
             />
         )}
         {activeTab === 'stats' && <StatsPage data={data} />}
         {activeTab === 'ai' && <AIPage data={data} onAddTransaction={handleTransactionSave} />} 
       </div>
 
-      {/* MENU BAR */}
       <div className="fixed bottom-0 left-0 right-0 z-40 bg-[#0a0e17]/95 backdrop-blur-md pb-4 pt-2 border-t border-white/5">
         <div className="flex justify-between items-center px-6">
            <button onClick={() => setActiveTab('home')} className={`flex flex-col items-center ${activeTab === 'home' ? 'text-[#00d4ff]' : 'text-gray-600'}`}><Home size={24}/></button>
            <button onClick={() => setActiveTab('stats')} className={`flex flex-col items-center ${activeTab === 'stats' ? 'text-[#00d4ff]' : 'text-gray-600'}`}><BarChart2 size={24}/></button>
-           
            <div className="relative -top-6">
               <button onClick={() => { setEditingTx(null); setIsTxModalOpen(true); }} className="w-16 h-16 rounded-full bg-[#141e3c] border border-[#00d4ff]/50 text-[#00d4ff] flex items-center justify-center shadow-[0_0_20px_rgba(0,212,255,0.4)] active:scale-95 transition-transform">
                 <Plus size={32} strokeWidth={3} />
               </button>
            </div>
-           
            <button onClick={() => setActiveTab('budget')} className={`flex flex-col items-center ${activeTab === 'budget' ? 'text-[#00d4ff]' : 'text-gray-600'}`}><PieChart size={24}/></button>
            <button onClick={() => setActiveTab('ai')} className={`flex flex-col items-center ${activeTab === 'ai' ? 'text-[#00d4ff]' : 'text-gray-600'}`}><Sparkles size={24}/></button>
         </div>
       </div>
 
-      {/* CONTEXT MENU */}
       {contextMenu && (
           <div className="absolute bg-[#141e3c] border border-white/10 rounded-2xl p-2 w-44 shadow-2xl z-[150] animate-slideUp" style={{ top: contextMenu.y - 100, left: Math.min(contextMenu.x - 20, window.innerWidth - 180) }} onClick={e => e.stopPropagation()}>
               <button onClick={() => { 
                   if(contextMenu.type === 'tx') { setEditingTx(contextMenu.item); setIsTxModalOpen(true); }
-                  if(contextMenu.type === 'wallet') { 
-                      setEditingWallet(contextMenu.item); // MUHIM: Edit statega yozamiz
-                      setIsWalletModalOpen(true); // Modalni ochamiz
-                  }
+                  if(contextMenu.type === 'wallet') { setEditingWallet(contextMenu.item); setIsWalletModalOpen(true); }
                   setContextMenu(null); 
               }} className="w-full text-left px-3 py-3 text-white text-sm font-bold hover:bg-white/5 rounded-xl">✏️ Tahrirlash</button>
               <div className="h-[1px] bg-white/5 my-1"></div>
@@ -157,16 +137,8 @@ function App() {
           </div>
       )}
 
-      {/* MODALLAR */}
-      <WalletModal 
-         isOpen={isWalletModalOpen} 
-         onClose={() => { setIsWalletModalOpen(false); setEditingWallet(null); }} 
-         onSave={handleWalletSave} 
-         initialData={editingWallet} // PROP QO'SHILDI
-      />
-      
+      <WalletModal isOpen={isWalletModalOpen} onClose={() => { setIsWalletModalOpen(false); setEditingWallet(null); }} onSave={handleWalletSave} initialData={editingWallet} />
       <TransactionModal isOpen={isTxModalOpen} onClose={() => setIsTxModalOpen(false)} onSave={handleTransactionSave} categories={data.categories} wallets={data.wallets} initialData={editingTx} onAddCategory={(c) => setData({...data, categories: [...data.categories, c]})} onUpdateCategories={(u) => setData({...data, categories: u})} />
-      
       <TransactionDetailModal isOpen={!!detailTx} onClose={() => setDetailTx(null)} transaction={detailTx} category={data.categories.find(c => c.id === detailTx?.categoryId)} wallet={data.wallets.find(w => w.id === detailTx?.walletId)} onEdit={(tx) => { setDetailTx(null); setEditingTx(tx); setIsTxModalOpen(true); }} onDelete={handleDeleteTx} />
     </div>
   );
