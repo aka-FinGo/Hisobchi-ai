@@ -24,6 +24,19 @@ export default function TransactionDetailModal({ isOpen, onClose, transaction, c
   const sub = category?.subs?.find(s => s.id === transaction.subCategoryId);
   const child = sub?.items?.find(i => i.id === transaction.childCategoryId);
 
+  // LOKATSIYANI TEKSHIRISH (Aniqroq logika)
+  const isCoordinates = (str?: string) => {
+    if (!str) return false;
+    // Oddiy regex: "raqam,raqam" formati (va bo'sh joylar)
+    const parts = str.split(',');
+    if (parts.length !== 2) return false;
+    const lat = parseFloat(parts[0]);
+    const lng = parseFloat(parts[1]);
+    return !isNaN(lat) && !isNaN(lng);
+  };
+
+  const hasLocation = isCoordinates(transaction.note);
+
   return (
     <div className="fixed inset-0 z-[200] flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 animate-slideUp">
       <div className="w-full max-w-md bg-[#0a0e17] rounded-[30px] overflow-hidden border border-white/10 relative shadow-[0_0_50px_rgba(0,0,0,0.8)]">
@@ -80,8 +93,8 @@ export default function TransactionDetailModal({ isOpen, onClose, transaction, c
                 )}
             </div>
 
-            {/* 3. LOKATSIYA (Popup Menu) */}
-            {transaction.note && transaction.note.includes(',') && !isNaN(parseFloat(transaction.note.split(',')[0])) ? (
+            {/* 3. LOKATSIYA (FIXED: Faqat koordinata bo'lsa chiqadi) */}
+            {hasLocation ? (
                <div className="relative">
                    <div onClick={() => setShowLocMenu(!showLocMenu)} className="bg-[#141e3c]/50 p-4 rounded-2xl flex items-center gap-3 cursor-pointer hover:bg-[#141e3c] border border-white/5 active:scale-95 transition-all">
                        <div className="p-2 rounded-xl bg-white/5"><MapPin size={18} className="text-[#00d4ff]"/></div>
@@ -94,7 +107,7 @@ export default function TransactionDetailModal({ isOpen, onClose, transaction, c
                    {/* Map Popup */}
                    {showLocMenu && (
                        <div className="absolute top-full left-0 w-full mt-2 bg-[#141e3c] border border-white/10 rounded-xl p-2 shadow-2xl z-20 animate-slideUp">
-                           <a href={`https://maps.google.com/?q=${transaction.note}`} target="_blank" className="flex items-center gap-3 p-3 hover:bg-white/5 rounded-lg text-white text-sm font-bold">
+                           <a href={`https://www.google.com/maps/search/?api=1&query=${transaction.note}`} target="_blank" className="flex items-center gap-3 p-3 hover:bg-white/5 rounded-lg text-white text-sm font-bold">
                                <ExternalLink size={16} className="text-green-400"/> Xaritada ochish
                            </a>
                            <button onClick={() => onFilter({ location: transaction.note })} className="w-full flex items-center gap-3 p-3 hover:bg-white/5 rounded-lg text-white text-sm font-bold text-left">
@@ -105,13 +118,19 @@ export default function TransactionDetailModal({ isOpen, onClose, transaction, c
                </div>
             ) : null}
 
-            {/* 4. SANA VA IZOH */}
+            {/* 4. SANA (Click -> Filter) VA IZOH */}
             <div className="grid grid-cols-2 gap-3">
-                <div className="bg-[#141e3c]/50 border border-white/5 rounded-2xl p-3 flex flex-col justify-center">
+                {/* SANA CLICK FIX */}
+                <div 
+                    onClick={() => onFilter({ startDate: transaction.date, endDate: transaction.date })}
+                    className="bg-[#141e3c]/50 border border-white/5 rounded-2xl p-3 flex flex-col justify-center cursor-pointer hover:bg-[#141e3c] active:scale-95"
+                >
                     <p className="text-[10px] text-gray-500 uppercase font-bold flex items-center gap-1"><Calendar size={10}/> Sana</p>
                     <p className="text-white font-bold text-sm">{transaction.date}</p>
                 </div>
-                {transaction.note && !transaction.note.includes(',') && (
+
+                {/* IZOH (Agar lokatsiya bo'lmasa) */}
+                {(!hasLocation && transaction.note) && (
                      <div className="bg-[#141e3c]/50 border border-white/5 rounded-2xl p-3 flex flex-col justify-center">
                         <p className="text-[10px] text-gray-500 uppercase font-bold">Izoh</p>
                         <p className="text-white text-xs line-clamp-2">{transaction.note}</p>
