@@ -18,18 +18,33 @@ function App() {
   const [activeTab, setActiveTab] = useState<TabType>('home');
   const [historyStack, setHistoryStack] = useState<TabType[]>([]);
 
-  // Modallar
   const [isTxModalOpen, setIsTxModalOpen] = useState(false);
   const [isWalletModalOpen, setIsWalletModalOpen] = useState(false);
   const [editingTx, setEditingTx] = useState<Transaction | null>(null);
   const [editingWallet, setEditingWallet] = useState<Wallet | null>(null);
   const [detailTx, setDetailTx] = useState<Transaction | null>(null);
   const [contextMenu, setContextMenu] = useState<{ x: number, y: number, item: any, type: 'wallet' | 'tx' } | null>(null);
-
-  // Filter State
   const [statsFilter, setStatsFilter] = useState<FilterState | null>(null);
 
   useEffect(() => { saveData(data); }, [data]);
+
+  // --- RUXSATLARNI SO'RASH (BIRINCHI MARTA) ---
+  useEffect(() => {
+    const requestPermissions = async () => {
+      // 1. Lokatsiya ruxsati (Browser API)
+      if ('geolocation' in navigator) {
+        navigator.geolocation.getCurrentPosition(
+          () => console.log("GPS Ruxsat berildi"),
+          (err) => console.log("GPS Ruxsat so'ralmoqda...", err)
+        );
+      }
+      // 2. Bildirishnoma (Kelajak uchun)
+      if ('Notification' in window && Notification.permission !== 'granted') {
+        Notification.requestPermission();
+      }
+    };
+    requestPermissions();
+  }, []);
 
   // Back Button Logic
   useEffect(() => {
@@ -50,13 +65,11 @@ function App() {
 
   // Handlers...
   const refreshData = () => { setData(loadData()); };
-
   const handleWalletSave = (wallet: Wallet) => {
     if (editingWallet) setData({ ...data, wallets: data.wallets.map(w => w.id === wallet.id ? wallet : w) });
     else setData({ ...data, wallets: [...data.wallets, wallet] });
     setIsWalletModalOpen(false); setEditingWallet(null);
   };
-
   const handleTransactionSave = (txData: Transaction) => {
     let newTx = [...data.transactions];
     let newW = [...data.wallets];
@@ -73,7 +86,6 @@ function App() {
     setData({ ...data, transactions: newTx, wallets: newW });
     setIsTxModalOpen(false); setEditingTx(null); setDetailTx(null);
   };
-
   const handleDeleteTx = (id: string) => {
      const tx = data.transactions.find(t => t.id === id);
      if(!tx) return;
@@ -81,13 +93,11 @@ function App() {
      setData({ ...data, transactions: data.transactions.filter(t => t.id !== id), wallets: newW });
      setContextMenu(null); setDetailTx(null);
   };
-
   const handleDeleteWallet = (id: string) => {
       if(data.wallets.length <= 1) return;
       setData({ ...data, wallets: data.wallets.filter(w => w.id !== id), transactions: data.transactions.filter(t => t.walletId !== id) });
       setContextMenu(null);
   };
-
   const handleJumpToFilter = (filter: FilterState) => {
     setStatsFilter(filter);
     setDetailTx(null);
@@ -99,22 +109,12 @@ function App() {
       <div className="flex-1 overflow-hidden relative">
         <div className="h-full w-full">
           {activeTab === 'home' && (
-              <HomePage 
-                  data={data} 
-                  onNavigate={(p) => { setHistoryStack(prev => [...prev, activeTab]); setActiveTab(p as any); }}
-                  onTransactionClick={setDetailTx}
-                  onContextMenu={(e, i, t) => setContextMenu({ x: e.clientX, y: e.clientY, item: i, type: t })}
-                  onAddWallet={() => { setEditingWallet(null); setIsWalletModalOpen(true); }}
-                  onRefresh={refreshData}
-              />
+              <HomePage data={data} onNavigate={(p) => { setHistoryStack(prev => [...prev, activeTab]); setActiveTab(p as any); }}
+                  onTransactionClick={setDetailTx} onContextMenu={(e, i, t) => setContextMenu({ x: e.clientX, y: e.clientY, item: i, type: t })}
+                  onAddWallet={() => { setEditingWallet(null); setIsWalletModalOpen(true); }} onRefresh={refreshData} />
           )}
           {activeTab === 'stats' && (
-              <StatsPage 
-                data={data} 
-                initialFilter={statsFilter} 
-                onClearFilter={() => setStatsFilter(null)}
-                onTxClick={setDetailTx} // YANGI: Amal bosilganda DetailModal ochiladi
-              />
+              <StatsPage data={data} initialFilter={statsFilter} onClearFilter={() => setStatsFilter(null)} onTxClick={setDetailTx} />
           )}
           {activeTab === 'ai' && <AIPage data={data} onAddTransaction={handleTransactionSave} />} 
         </div>
@@ -134,7 +134,6 @@ function App() {
         </div>
       </div>
 
-      {/* Modallar */}
       {contextMenu && (
           <div className="absolute bg-[#141e3c] border border-white/10 rounded-2xl p-2 w-44 shadow-2xl z-[150] animate-slideUp" style={{ top: contextMenu.y - 100, left: Math.min(contextMenu.x - 20, window.innerWidth - 180) }} onClick={e => e.stopPropagation()}>
               <button onClick={() => { if(contextMenu.type === 'tx') { setEditingTx(contextMenu.item); setIsTxModalOpen(true); } if(contextMenu.type === 'wallet') { setEditingWallet(contextMenu.item); setIsWalletModalOpen(true); } setContextMenu(null); }} className="w-full text-left px-3 py-3 text-white text-sm font-bold hover:bg-white/5 rounded-xl">✏️ Tahrirlash</button>
@@ -145,17 +144,7 @@ function App() {
 
       <WalletModal isOpen={isWalletModalOpen} onClose={() => { setIsWalletModalOpen(false); setEditingWallet(null); }} onSave={handleWalletSave} initialData={editingWallet} />
       <TransactionModal isOpen={isTxModalOpen} onClose={() => setIsTxModalOpen(false)} onSave={handleTransactionSave} categories={data.categories} wallets={data.wallets} initialData={editingTx} onAddCategory={(c) => setData({...data, categories: [...data.categories, c]})} onUpdateCategories={(u) => setData({...data, categories: u})} />
-      
-      <TransactionDetailModal 
-        isOpen={!!detailTx} 
-        onClose={() => setDetailTx(null)} 
-        transaction={detailTx} 
-        category={data.categories.find(c => c.id === detailTx?.categoryId)} 
-        wallet={data.wallets.find(w => w.id === detailTx?.walletId)} 
-        onEdit={(tx) => { setDetailTx(null); setEditingTx(tx); setIsTxModalOpen(true); }} 
-        onDelete={handleDeleteTx}
-        onFilter={handleJumpToFilter} 
-      />
+      <TransactionDetailModal isOpen={!!detailTx} onClose={() => setDetailTx(null)} transaction={detailTx} category={data.categories.find(c => c.id === detailTx?.categoryId)} wallet={data.wallets.find(w => w.id === detailTx?.walletId)} onEdit={(tx) => { setDetailTx(null); setEditingTx(tx); setIsTxModalOpen(true); }} onDelete={handleDeleteTx} onFilter={handleJumpToFilter} />
     </div>
   );
 }
