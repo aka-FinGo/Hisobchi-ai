@@ -20,12 +20,14 @@ export interface AppSettings {
   themeColor: string;
   enable3D: boolean;
   
-  // YANGI: Alohida kalitlar
+  // API Kalitlar
   geminiKey?: string;
   groqKey?: string;
   
-  // Qaysi birini birinchi ishlatish kerak?
-  preferredProvider: 'gemini' | 'groq'; 
+  // Model tanlash
+  preferredProvider: 'gemini' | 'groq';
+  geminiModel: 'gemini-2.5-flash' | 'gemini-3-flash' | 'gemini-2.0-flash'; // 2026-yil modellar
+  groqModel: 'llama-3.3-70b-versatile' | 'llama3-8b-8192';
 }
 
 export interface AppProfile { name: string; avatar: string; }
