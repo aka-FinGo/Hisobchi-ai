@@ -77,26 +77,57 @@ export default function AIPage({ data, onAddTransaction }: Props) {
   // --- FALLBACK LOGIKASI ---
   const callAIProvider = async (provider: string, key: string, prompt: string, userMsg: string) => {
       if (provider === 'gemini') {
-          const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${key}`, {
-              method: 'POST', headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ contents: [{ role: 'user', parts: [{ text: prompt + `\n\nUser: ${userMsg}` }] }] })
+          // Gemini 3 Flash Preview va x-goog-api-key header uslubi
+          const url = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-exp:generateContent'; // Hozirgi barqaror preview
+          const res = await fetch(`${url}?key=${key}`, { // URL orqali yuborish ishonchliroq
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                  contents: [{
+                      parts: [{ text: prompt + `\n\nFoydalanuvchi so'rovi: ${userMsg}` }]
+                  }],
+                  generationConfig: {
+                    temperature: 1,
+                    maxOutputTokens: 1024,
+                  }
+              })
           });
-          if (!res.ok) throw new Error("Gemini Error");
+          if (!res.ok) throw new Error("Gemini API xatosi");
           const json = await res.json();
           return json.candidates?.[0]?.content?.parts?.[0]?.text;
       } 
+      
       else if (provider === 'groq') {
+          // Siz bergan Groq Compound modeli va Tools sozlamalari
           const res = await fetch('https://api.groq.com/openai/v1/chat/completions', {
-              method: 'POST', headers: { 'Authorization': `Bearer ${key}`, 'Content-Type': 'application/json' },
-              body: JSON.stringify({ model: "llama3-8b-8192", messages: [{ role: "system", content: prompt }, { role: "user", content: userMsg }] })
+              method: 'POST',
+              headers: { 
+                  'Authorization': `Bearer ${key}`, 
+                  'Content-Type': 'application/json' 
+              },
+              body: JSON.stringify({
+                  model: "llama-3.3-70b-versatile", // Compound model nomi provayderga qarab o'zgarishi mumkin
+                  messages: [
+                      { role: "system", content: prompt },
+                      { role: "user", content: userMsg }
+                  ],
+                  temperature: 1,
+                  max_completion_tokens: 1024,
+                  top_p: 1,
+                  // Compound model xususiyatlari (agar API qo'llab quvvatlasa)
+                  compound_custom: {
+                      tools: {
+                          enabled_tools: ["web_search", "code_interpreter", "visit_website"]
+                      }
+                  }
+              })
           });
-          if (!res.ok) throw new Error("Groq Error");
+          if (!res.ok) throw new Error("Groq API xatosi");
           const json = await res.json();
           return json.choices?.[0]?.message?.content;
       }
-      throw new Error("Unknown provider");
+      throw new Error("Noma'lum provayder");
   };
-
   const handleSend = async () => {
     if (!input.trim()) return;
     const userMsg: ChatMessage = { id: Date.now().toString(), role: 'user', content: input };
