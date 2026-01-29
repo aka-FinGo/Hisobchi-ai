@@ -10,7 +10,9 @@ const defaultData: AppData = {
     useBiometrics: false,
     themeColor: '#00d4ff',
     enable3D: true,
-    aiProvider: 'gemini' // DEFAULT
+    geminiKey: '',
+    groqKey: '',
+    preferredProvider: 'gemini'
   },
   wallets: [{ id: 'w1', name: 'Naqd Pul', type: 'cash', balance: 0, currency: 'UZS' }],
   transactions: [],
@@ -27,7 +29,17 @@ export const loadData = (): AppData => {
     if (data) {
       const parsed = JSON.parse(data);
       if (!parsed.settings) parsed.settings = defaultData.settings;
-      if (!parsed.settings.aiProvider) parsed.settings.aiProvider = 'gemini'; // Eskilar uchun
+      
+      // --- MIGRATION (ESKI KALITNI QUTQARISH) ---
+      // Agar eski versiyada aiApiKey bor bo'lsa va geminiKey bo'sh bo'lsa:
+      if (parsed.settings.aiApiKey && !parsed.settings.geminiKey) {
+          parsed.settings.geminiKey = parsed.settings.aiApiKey;
+      }
+      // Providerni to'g'irlash
+      if (!parsed.settings.preferredProvider) {
+          parsed.settings.preferredProvider = parsed.settings.aiProvider || 'gemini';
+      }
+      
       if (!parsed.wallets || parsed.wallets.length === 0) parsed.wallets = defaultData.wallets;
       if (!parsed.transactions) parsed.transactions = [];
       return parsed as AppData;
