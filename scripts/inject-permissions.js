@@ -2,14 +2,14 @@ import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
 
-// ESM rejimida __dirname to'g'ridan-to'g'ri ishlamaydi, uni o'zimiz yasaymiz:
+// ESM rejimida __dirname ni aniqlash
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 // Manifest fayl yo'li
 const manifestPath = path.join(__dirname, '../android/app/src/main/AndroidManifest.xml');
 
-// Bizga kerakli ruxsatlar
+// Bizga kerakli BARCHA ruxsatlar (GPS + Barmoq izi)
 const permissions = `
     <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE"/>
     <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" />
@@ -17,25 +17,26 @@ const permissions = `
     <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
     <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
     <uses-feature android:name="android.hardware.location.gps" />
+    
+    <uses-permission android:name="android.permission.USE_BIOMETRIC" />
+    <uses-permission android:name="android.permission.USE_FINGERPRINT" />
     `;
 
 try {
     if (fs.existsSync(manifestPath)) {
         let content = fs.readFileSync(manifestPath, 'utf8');
         
-        // Agar ruxsatlar allaqachon bo'lmasa, qo'shamiz
-        if (!content.includes('ACCESS_FINE_LOCATION')) {
-            // Ruxsatlarni <application> tegidan oldin qo'shamiz
+        // Agar ruxsatlar hali qo'shilmagan bo'lsa
+        if (!content.includes('USE_BIOMETRIC')) {
+            // Ruxsatlarni <application> tegidan oldin joylaymiz
             content = content.replace('<application', `${permissions}\n    <application`);
             fs.writeFileSync(manifestPath, content);
-            console.log('✅ Ruxsatlar AndroidManifest.xml ga muvaffaqiyatli yozildi!');
+            console.log('✅ GPS va Barmoq izi ruxsatlari muvaffaqiyatli qo\'shildi!');
         } else {
             console.log('⚠️ Ruxsatlar allaqachon mavjud.');
         }
     } else {
-        console.error('❌ Xatolik: AndroidManifest.xml topilmadi! Android papkasi yaratilganiga ishonch hosil qiling.');
-        // Xato bo'lsa ham jarayon to'xtab qolmasligi uchun exit(0) qilamiz, 
-        // chunki ba'zida papka kechroq paydo bo'lishi mumkin.
+        console.error('❌ Xatolik: AndroidManifest.xml topilmadi! (Build jarayonida yaratiladi)');
         process.exit(0); 
     }
 } catch (err) {
