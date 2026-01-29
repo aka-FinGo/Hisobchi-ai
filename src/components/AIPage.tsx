@@ -74,10 +74,16 @@ export default function AIPage({ data, onAddTransaction }: Props) {
   };
   // --- MULTI-MODEL CALL (GEMINI 2.5 FLASH FIRST) ---
   const callAI = async (provider: string, key: string, prompt: string, userMsg: string) => {
+    
+    // --- MODELNI TANLASH ---
+    const MODEL = provider === 'gemini' 
+      ? (data.settings.geminiModel || 'gemini-2.5-flash') 
+      : (data.settings.groqModel || 'llama-3.3-70b-versatile');
+
     try {
       if (provider === 'gemini') {
-        // Siz aytgan v1alpha endpoint va Gemini 2.5 Flash modeli
-        const url = `https://generativelanguage.googleapis.com/v1alpha/models/gemini-2.5-flash:generateContent?key=${key}`;
+        // Dinamik model nomi va v1alpha versiyasi
+        const url = `https://generativelanguage.googleapis.com/v1alpha/models/${MODEL}:generateContent?key=${key}`;
         
         const response = await fetch(url, {
           method: 'POST',
@@ -92,23 +98,29 @@ export default function AIPage({ data, onAddTransaction }: Props) {
 
         if (!response.ok) {
            const errData = await response.json();
-           throw new Error(`Gemini Alpha Error: ${errData.error?.message || response.status}`);
+           throw new Error(`Gemini Alpha Error (${MODEL}): ${errData.error?.message || response.status}`);
         }
         
         const json = await response.json();
         return json.candidates[0].content.parts[0].text;
+
       } else {
         // Groq Compound (Fallback)
         const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
           method: 'POST',
           headers: { 'Authorization': `Bearer ${key}`, 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            model: "llama-3.3-70b-versatile",
+            model: MODEL, // Dinamik tanlangan Groq modeli
             messages: [{ role: "system", content: prompt }, { role: "user", content: userMsg }],
             response_format: { type: "json_object" }
           })
         });
-        if (!response.ok) throw new Error(`Groq status: ${response.status}`);
+
+        if (!response.ok) {
+          const errData = await response.json();
+          throw new Error(`Groq Error (${MODEL}): ${errData.error?.message || response.status}`);
+        }
+
         const json = await response.json();
         return json.choices[0].message.content;
       }
