@@ -30,6 +30,7 @@ export interface AppSettings {
   customPrompt?: string;
   geminiModel: string; 
   groqModel: string;
+  aiModel: string;
 }
 
 export interface AppProfile { name: string; avatar: string; }
