@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { App as CapacitorApp } from '@capacitor/app';
-import { Home, BarChart2, Plus, Sparkles, User, Lock, Shield, Fingerprint, Key, Camera, Server } from 'lucide-react';
+import { Home, BarChart2, Plus, Sparkles, User, Lock, Shield, Fingerprint, Key, Camera, Server, Save, CheckCircle } from 'lucide-react';
 import { loadData, saveData } from './storage';
 import { AppData, Transaction, Wallet, FilterState } from './types';
 
@@ -15,125 +15,135 @@ import AIPage from './components/AIPage';
 const ProfilePage = ({ data, onUpdateSettings }: { data: AppData, onUpdateSettings: (s: any) => void }) => {
     const [name, setName] = useState(data.settings.userName || '');
     const [pin, setPin] = useState(data.settings.pinCode || '');
-    const [apiKey, setApiKey] = useState(data.settings.aiApiKey || '');
-    const [provider, setProvider] = useState(data.settings.aiProvider || 'gemini');
     const [biometrics, setBiometrics] = useState(data.settings.useBiometrics || false);
+    
+    // AI STATE
+    const [geminiKey, setGeminiKey] = useState(data.settings.geminiKey || '');
+    const [groqKey, setGroqKey] = useState(data.settings.groqKey || '');
+    const [preferred, setPreferred] = useState(data.settings.preferredProvider || 'gemini');
+    
+    const [isSaved, setIsSaved] = useState(false);
+
+    const handleSave = () => {
+        onUpdateSettings({
+            ...data.settings,
+            userName: name,
+            pinCode: pin || null,
+            useBiometrics: biometrics,
+            geminiKey,
+            groqKey,
+            preferredProvider: preferred
+        });
+        setIsSaved(true);
+        setTimeout(() => setIsSaved(false), 2000);
+    };
 
     const handleAvatarChange = () => {
         alert("Rasm yuklash funksiyasi tez orada qo'shiladi!");
     };
 
     return (
-        <div className="p-6 pt-10 animate-slideUp pb-32">
-            <h2 className="text-2xl font-bold text-white mb-8 flex items-center gap-2"><User className="text-[#00d4ff]"/> Profil</h2>
+        <div className="h-full flex flex-col bg-[#0a0e17] animate-slideUp">
+            <div className="p-6 pt-10 pb-4 shrink-0 bg-[#0a0e17] z-10 sticky top-0">
+                 <h2 className="text-2xl font-bold text-white flex items-center gap-2"><User className="text-[#00d4ff]"/> Profil</h2>
+            </div>
             
-            {/* 1. AVATAR VA ISM */}
-            <div className="flex flex-col items-center mb-10">
-                <div className="relative mb-4">
-                    <img src={data.profile.avatar} alt="Avatar" className="w-24 h-24 rounded-full border-4 border-[#141e3c] shadow-2xl object-cover"/>
-                    <button onClick={handleAvatarChange} className="absolute bottom-0 right-0 p-2 bg-[#00d4ff] rounded-full text-[#0a0e17] shadow-lg active:scale-95">
-                        <Camera size={16}/>
-                    </button>
-                </div>
-                <input 
-                    value={name} 
-                    onChange={e => { setName(e.target.value); onUpdateSettings({...data.settings, userName: e.target.value}) }} 
-                    className="bg-transparent text-center text-xl font-bold text-white outline-none border-b border-transparent focus:border-[#00d4ff] pb-1 w-2/3"
-                    placeholder="Ismingiz"
-                />
-            </div>
-
-            {/* 2. AI SOZLAMALARI */}
-            <div className="mb-6">
-                <h3 className="text-gray-500 text-xs font-bold uppercase mb-3 ml-1">AI Integratsiya</h3>
-                <div className="bg-[#141e3c] p-4 rounded-2xl border border-white/5 space-y-4">
-                    
-                    {/* Provayder Tanlash */}
-                    <div>
-                        <div className="flex items-center gap-3 mb-2">
-                            <div className="p-2 bg-white/5 rounded-lg"><Server size={18} className="text-[#00ff9d]"/></div>
-                            <span className="text-white text-sm font-bold">AI Provayder</span>
-                        </div>
-                        <div className="flex bg-[#0a0e17] rounded-xl p-1 border border-white/10">
-                            <button onClick={() => { setProvider('gemini'); onUpdateSettings({...data.settings, aiProvider: 'gemini'}) }} className={`flex-1 py-2 rounded-lg text-xs font-bold transition-all ${provider === 'gemini' ? 'bg-[#00d4ff] text-[#0a0e17]' : 'text-gray-500'}`}>Google Gemini</button>
-                            <button onClick={() => { setProvider('groq'); onUpdateSettings({...data.settings, aiProvider: 'groq'}) }} className={`flex-1 py-2 rounded-lg text-xs font-bold transition-all ${provider === 'groq' ? 'bg-[#f55036] text-white' : 'text-gray-500'}`}>Groq (Llama)</button>
-                        </div>
-                    </div>
-
-                    {/* API Kalit */}
-                    <div>
-                        <div className="flex items-center gap-3 mb-2">
-                            <div className="p-2 bg-white/5 rounded-lg"><Key size={18} className="text-[#bb86fc]"/></div>
-                            <span className="text-white text-sm font-bold">API Kalit ({provider === 'gemini' ? 'Gemini' : 'Groq'})</span>
-                        </div>
-                        <input 
-                            type="text" 
-                            placeholder={provider === 'gemini' ? "AIzaSy..." : "gsk_..."}
-                            value={apiKey} 
-                            onChange={e => { setApiKey(e.target.value); onUpdateSettings({...data.settings, aiApiKey: e.target.value}); }} 
-                            className="w-full bg-[#0a0e17] text-white p-3 rounded-xl outline-none border border-white/10 focus:border-[#bb86fc] text-xs font-mono"
-                        />
-                        <p className="text-[10px] text-gray-500 mt-2">Agar kalit bo'lmasa, AI ishlamaydi.</p>
-                    </div>
-                </div>
-            </div>
-
-            {/* 3. XAVFSIZLIK SOZLAMALARI */}
-            <div className="mb-6">
-                <h3 className="text-gray-500 text-xs font-bold uppercase mb-3 ml-1">Xavfsizlik</h3>
-                <div className="bg-[#141e3c] rounded-2xl overflow-hidden border border-white/5">
-                    
-                    {/* PIN KOD */}
-                    <div className="p-4 border-b border-white/5">
-                        <div className="flex justify-between items-center mb-2">
-                            <div className="flex items-center gap-3">
-                                <div className="p-2 bg-white/5 rounded-lg"><Lock size={18} className="text-[#00d4ff]"/></div>
-                                <span className="text-white text-sm font-bold">PIN Kod bilan kirish</span>
-                            </div>
-                            <div className="relative inline-block w-10 h-6 align-middle select-none">
-                                <input type="checkbox" checked={!!pin} onChange={() => { if(pin) { setPin(''); onUpdateSettings({...data.settings, pinCode: null}); } else { setPin('0000'); onUpdateSettings({...data.settings, pinCode: '0000'}); } }} className="hidden"/>
-                                <div className={`block w-10 h-6 rounded-full cursor-pointer transition-colors ${pin ? 'bg-[#00d4ff]' : 'bg-gray-600'}`} onClick={() => { if(pin) { setPin(''); onUpdateSettings({...data.settings, pinCode: null}); } else { setPin('0000'); onUpdateSettings({...data.settings, pinCode: '0000'}); } }}></div>
-                                <div className={`absolute top-1 bg-white w-4 h-4 rounded-full transition-transform ${pin ? 'left-5' : 'left-1'}`}></div>
-                            </div>
-                        </div>
-                        {pin && (
-                            <input 
-                                type="number" 
-                                placeholder="Yangi PIN (4 ta raqam)" 
-                                value={pin} 
-                                onChange={e => { 
-                                    const val = e.target.value; 
-                                    if(val.length <= 4) { setPin(val); if(val.length === 4) onUpdateSettings({...data.settings, pinCode: val}); } 
-                                }} 
-                                className="w-full bg-[#0a0e17] text-white p-3 rounded-xl text-center tracking-[8px] font-mono outline-none border border-white/10 focus:border-[#00d4ff]"
-                            />
-                        )}
-                    </div>
-
-                    {/* BARMOQ IZI */}
-                    <div className="p-4 flex justify-between items-center">
-                        <div className="flex items-center gap-3">
-                            <div className="p-2 bg-white/5 rounded-lg"><Fingerprint size={18} className="text-[#ff3366]"/></div>
-                            <span className="text-white text-sm font-bold">Barmoq izi skaneri</span>
-                        </div>
-                        <button onClick={() => { setBiometrics(!biometrics); onUpdateSettings({...data.settings, useBiometrics: !biometrics}); }} 
-                            className={`w-10 h-6 rounded-full relative transition-colors ${biometrics ? 'bg-[#ff3366]' : 'bg-gray-600'}`}>
-                            <div className={`w-4 h-4 bg-white rounded-full absolute top-1 transition-all ${biometrics ? 'left-5' : 'left-1'}`}></div>
+            {/* SCROLLABLE CONTENT AREA */}
+            <div className="flex-1 overflow-y-auto px-6 pb-32 scroll-area">
+                
+                {/* 1. AVATAR */}
+                <div className="flex flex-col items-center mb-10">
+                    <div className="relative mb-4">
+                        <img src={data.profile.avatar} alt="Avatar" className="w-24 h-24 rounded-full border-4 border-[#141e3c] shadow-2xl object-cover"/>
+                        <button onClick={handleAvatarChange} className="absolute bottom-0 right-0 p-2 bg-[#00d4ff] rounded-full text-[#0a0e17] shadow-lg active:scale-95">
+                            <Camera size={16}/>
                         </button>
                     </div>
+                    <input 
+                        value={name} 
+                        onChange={e => setName(e.target.value)}
+                        className="bg-transparent text-center text-xl font-bold text-white outline-none border-b border-transparent focus:border-[#00d4ff] pb-1 w-2/3"
+                        placeholder="Ismingiz"
+                    />
                 </div>
-            </div>
-            
-            {/* OGOHLANTIRISH */}
-            <div className="mt-6 p-4 bg-yellow-500/10 border border-yellow-500/20 rounded-xl flex gap-3">
-                <Shield className="text-yellow-500 shrink-0" size={20}/>
-                <p className="text-yellow-500 text-xs leading-relaxed"><b>Eslatma:</b> Dasturni yangilashda eskisini o'chirib tashlashga to'g'ri kelyapti. Ma'lumotlaringizni ehtiyot qiling.</p>
+
+                {/* 2. AI SOZLAMALARI (MULTI-KEY) */}
+                <div className="mb-6">
+                    <h3 className="text-gray-500 text-xs font-bold uppercase mb-3 ml-1">AI Kalitlar (API Keys)</h3>
+                    <div className="bg-[#141e3c] p-4 rounded-2xl border border-white/5 space-y-5">
+                        
+                        {/* Asosiy Provayder */}
+                        <div>
+                            <p className="text-white text-xs font-bold mb-2 flex items-center gap-2"><Server size={14} className="text-[#00ff9d]"/> Asosiy AI</p>
+                            <div className="flex bg-[#0a0e17] rounded-xl p-1 border border-white/10">
+                                <button onClick={() => setPreferred('gemini')} className={`flex-1 py-2 rounded-lg text-xs font-bold transition-all ${preferred === 'gemini' ? 'bg-[#00d4ff] text-[#0a0e17]' : 'text-gray-500'}`}>Gemini</button>
+                                <button onClick={() => setPreferred('groq')} className={`flex-1 py-2 rounded-lg text-xs font-bold transition-all ${preferred === 'groq' ? 'bg-[#f55036] text-white' : 'text-gray-500'}`}>Groq</button>
+                            </div>
+                            <p className="text-[10px] text-gray-500 mt-2">Agar asosiysi ishlamasa, ikkinchisiga avtomatik o'tadi.</p>
+                        </div>
+
+                        {/* Gemini Key Input */}
+                        <div>
+                            <p className="text-white text-xs font-bold mb-2 text-[#00d4ff]">Google Gemini API Key</p>
+                            <div className="relative">
+                                <input 
+                                    type="text" 
+                                    placeholder="AIzaSy..."
+                                    value={geminiKey} 
+                                    onChange={e => setGeminiKey(e.target.value)} 
+                                    className="w-full bg-[#0a0e17] text-white p-3 pl-10 rounded-xl outline-none border border-white/10 focus:border-[#00d4ff] text-xs font-mono"
+                                />
+                                <Key size={14} className="absolute left-3 top-3.5 text-gray-500"/>
+                            </div>
+                        </div>
+
+                        {/* Groq Key Input */}
+                        <div>
+                            <p className="text-white text-xs font-bold mb-2 text-[#f55036]">Groq (Llama 3) API Key</p>
+                            <div className="relative">
+                                <input 
+                                    type="text" 
+                                    placeholder="gsk_..."
+                                    value={groqKey} 
+                                    onChange={e => setGroqKey(e.target.value)} 
+                                    className="w-full bg-[#0a0e17] text-white p-3 pl-10 rounded-xl outline-none border border-white/10 focus:border-[#f55036] text-xs font-mono"
+                                />
+                                <Key size={14} className="absolute left-3 top-3.5 text-gray-500"/>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                {/* 3. XAVFSIZLIK SOZLAMALARI */}
+                <div className="mb-6">
+                    <h3 className="text-gray-500 text-xs font-bold uppercase mb-3 ml-1">Xavfsizlik</h3>
+                    <div className="bg-[#141e3c] rounded-2xl overflow-hidden border border-white/5">
+                        <div className="p-4 border-b border-white/5">
+                            <div className="flex justify-between items-center mb-2">
+                                <div className="flex items-center gap-3"><div className="p-2 bg-white/5 rounded-lg"><Lock size={18} className="text-[#00d4ff]"/></div><span className="text-white text-sm font-bold">PIN Kod</span></div>
+                                <div className="relative inline-block w-10 h-6 align-middle select-none"><input type="checkbox" checked={!!pin} onChange={() => { if(pin) setPin(''); else setPin('0000'); }} className="hidden"/><div className={`block w-10 h-6 rounded-full cursor-pointer transition-colors ${pin ? 'bg-[#00d4ff]' : 'bg-gray-600'}`} onClick={() => { if(pin) setPin(''); else setPin('0000'); }}></div><div className={`absolute top-1 bg-white w-4 h-4 rounded-full transition-transform ${pin ? 'left-5' : 'left-1'}`}></div></div>
+                            </div>
+                            {pin && (<input type="number" placeholder="PIN (4 ta)" value={pin} onChange={e => { const val = e.target.value; if(val.length <= 4) setPin(val); }} className="w-full bg-[#0a0e17] text-white p-3 rounded-xl text-center tracking-[8px] font-mono outline-none border border-white/10 focus:border-[#00d4ff]"/>)}
+                        </div>
+                        
+                        <div className="p-4 flex justify-between items-center">
+                             <div className="flex items-center gap-3"><div className="p-2 bg-white/5 rounded-lg"><Fingerprint size={18} className="text-[#ff3366]"/></div><span className="text-white text-sm font-bold">Barmoq izi</span></div>
+                             <button onClick={() => setBiometrics(!biometrics)} className={`w-10 h-6 rounded-full relative transition-colors ${biometrics ? 'bg-[#ff3366]' : 'bg-gray-600'}`}><div className={`w-4 h-4 bg-white rounded-full absolute top-1 transition-all ${biometrics ? 'left-5' : 'left-1'}`}></div></button>
+                        </div>
+                    </div>
+                </div>
+
+                {/* SAVE BUTTON */}
+                <button onClick={handleSave} className={`w-full py-4 rounded-2xl font-bold uppercase tracking-widest text-sm transition-all flex items-center justify-center gap-2 shadow-lg mb-10 ${isSaved ? 'bg-[#107c41] text-white' : 'bg-[#00d4ff] text-[#0a0e17]'}`}>
+                    {isSaved ? <CheckCircle size={20}/> : <Save size={20}/>}
+                    {isSaved ? "SAQLANDI" : "SOZLAMALARNI SAQLASH"}
+                </button>
             </div>
         </div>
-    )
-}
+    );
+};
 
-// --- LOCK SCREEN (QULF OYNASI) ---
+// --- LOCK SCREEN ---
 const LockScreen = ({ correctPin, onUnlock }: { correctPin: string, onUnlock: () => void }) => {
     const [input, setInput] = useState('');
     const [error, setError] = useState(false);
