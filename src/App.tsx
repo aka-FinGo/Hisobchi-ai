@@ -33,38 +33,35 @@ const GROQ_MODELS = [
 
 // --- PROFIL SAHIFASI ---
 const ProfilePage = ({ data, onUpdateSettings }: { data: AppData, onUpdateSettings: (s: any) => void }) => {
-    const [name, setName] = useState(data.settings.userName || '');
-    const [pin, setPin] = useState(data.settings.pinCode || '');
-    const [biometrics, setBiometrics] = useState(data.settings.useBiometrics || false);
-    
-    // AI STATE
-    const [geminiKey, setGeminiKey] = useState(data.settings.geminiKey || '');
-    const [groqKey, setGroqKey] = useState(data.settings.groqKey || '');
-    const [preferred, setPreferred] = useState<'gemini' | 'groq'>(data.settings.preferredProvider || 'gemini');
-    const [aiModel, setAiModel] = useState(data.settings.aiModel || 'gemini-2.5-flash');
-    const [customPrompt, setCustomPrompt] = useState(data.settings.customPrompt || '');
-    
+    // Local state for tracking changes
+    const [settings, setSettings] = useState(data.settings);
+    const [isChanged, setIsChanged] = useState(false);
     const [isSaved, setIsSaved] = useState(false);
 
-    // Provayder o'zgarganda, modelni ham o'sha provayderning birinchi modeliga o'tkazib qo'yamiz
-    const handleProviderChange = (newProvider: 'gemini' | 'groq') => {
-        setPreferred(newProvider);
-        if (newProvider === 'gemini') setAiModel(GEMINI_MODELS[0].id);
-        else setAiModel(GROQ_MODELS[0].id);
+    // Modellar ro'yxati
+    const geminiModels = [
+        { id: 'gemini-2.5-flash', name: 'Gemini 2.5 Flash (v1alpha)' },
+        { id: 'gemini-2.5-pro', name: 'Gemini 2.5 Pro' },
+        { id: 'gemini-2.0-flash', name: 'Gemini 2.0 Flash' },
+        { id: 'gemini-1.5-flash', name: 'Gemini 1.5 Flash (Stable)' }
+    ];
+
+    const groqModels = [
+        { id: 'llama-3.3-70b-versatile', name: 'Llama 3.3 70B (Compound)' },
+        { id: 'llama-3.1-8b-instant', name: 'Llama 3.1 8B (Fast)' },
+        { id: 'mixtral-8x7b-32768', name: 'Mixtral 8x7B' }
+    ];
+
+    // Biror narsa o'zgarganda tekshirish
+    const handleChange = (key: string, value: any) => {
+        const newSettings = { ...settings, [key]: value };
+        setSettings(newSettings);
+        setIsChanged(JSON.stringify(newSettings) !== JSON.stringify(data.settings));
     };
 
     const handleSave = () => {
-        onUpdateSettings({
-            ...data.settings,
-            userName: name,
-            pinCode: pin && pin.length === 4 ? pin : null,
-            useBiometrics: biometrics,
-            geminiKey,
-            groqKey,
-            preferredProvider: preferred,
-            aiModel,
-            customPrompt
-        });
+        onUpdateSettings(settings);
+        setIsChanged(false);
         setIsSaved(true);
         setTimeout(() => setIsSaved(false), 2000);
     };
@@ -76,103 +73,128 @@ const ProfilePage = ({ data, onUpdateSettings }: { data: AppData, onUpdateSettin
             </div>
             
             <div className="flex-1 overflow-y-auto px-6 pb-32 scroll-area">
-                {/* 1. AVATAR */}
+                {/* 1. AVATAR & NAME */}
                 <div className="flex flex-col items-center mb-10">
                     <div className="relative mb-4">
                         <img src={data.profile.avatar} alt="Avatar" className="w-24 h-24 rounded-full border-4 border-[#141e3c] shadow-2xl object-cover"/>
                         <button className="absolute bottom-0 right-0 p-2 bg-[#00d4ff] rounded-full text-[#0a0e17] shadow-lg active:scale-95"><Camera size={16}/></button>
                     </div>
-                    <input value={name} onChange={e => setName(e.target.value)} className="bg-transparent text-center text-xl font-bold text-white outline-none border-b border-transparent focus:border-[#00d4ff] pb-1 w-2/3" placeholder="Ismingiz"/>
+                    <input 
+                        value={settings.userName} 
+                        onChange={e => handleChange('userName', e.target.value)} 
+                        className="bg-transparent text-center text-xl font-bold text-white outline-none border-b border-white/10 focus:border-[#00d4ff] pb-1 w-2/3" 
+                        placeholder="Ismingiz"
+                    />
                 </div>
 
-                {/* 2. AI SOZLAMALARI (SELECT MENYU BILAN) */}
+                {/* 2. AI SETTINGS */}
                 <div className="mb-6">
-                    <h3 className="text-gray-500 text-xs font-bold uppercase mb-3 ml-1">AI Miyasi</h3>
+                    <h3 className="text-gray-500 text-xs font-bold uppercase mb-3 ml-1">AI Provayder va Modellar</h3>
                     <div className="bg-[#141e3c] p-4 rounded-2xl border border-white/5 space-y-5">
                         
-                        {/* PROVAYDER SELECT */}
-                        <div>
-                            <p className="text-white text-xs font-bold mb-2 flex items-center gap-2"><Server size={14} className="text-[#00ff9d]"/> Asosiy Provayder</p>
-                            <div className="relative">
-                                <select 
-                                    value={preferred} 
-                                    onChange={(e) => handleProviderChange(e.target.value as any)}
-                                    className="w-full bg-[#0a0e17] text-white p-3 rounded-xl outline-none border border-white/10 focus:border-[#00ff9d] text-sm appearance-none"
-                                >
-                                    <option value="gemini">Google Gemini AI</option>
-                                    <option value="groq">Groq (Llama / Mixtral)</option>
-                                </select>
-                                <ChevronDown size={16} className="absolute right-3 top-4 pointer-events-none text-gray-500"/>
-                            </div>
+                        {/* Provider Selection Buttons */}
+                        <div className="flex bg-[#0a0e17] rounded-xl p-1 border border-white/10">
+                            <button 
+                                onClick={() => handleChange('preferredProvider', 'gemini')} 
+                                className={`flex-1 py-2 rounded-lg text-xs font-bold transition-all ${settings.preferredProvider === 'gemini' ? 'bg-[#00d4ff] text-[#0a0e17]' : 'text-gray-500'}`}
+                            >
+                                Gemini
+                            </button>
+                            <button 
+                                onClick={() => handleChange('preferredProvider', 'groq')} 
+                                className={`flex-1 py-2 rounded-lg text-xs font-bold transition-all ${settings.preferredProvider === 'groq' ? 'bg-[#f55036] text-white' : 'text-gray-500'}`}
+                            >
+                                Groq
+                            </button>
                         </div>
 
-                        {/* MODEL SELECT (Dinamik o'zgaradi) */}
-                        <div>
-                            <p className="text-white text-xs font-bold mb-2 flex items-center gap-2"><Sparkles size={14} className="text-yellow-500"/> Modelni Tanlang</p>
-                            <div className="relative">
-                                <select 
-                                    value={aiModel} 
-                                    onChange={(e) => setAiModel(e.target.value)}
-                                    className="w-full bg-[#0a0e17] text-white p-3 rounded-xl outline-none border border-white/10 focus:border-yellow-500 text-sm appearance-none"
-                                >
-                                    {preferred === 'gemini' 
-                                        ? GEMINI_MODELS.map(m => <option key={m.id} value={m.id}>{m.name}</option>)
-                                        : GROQ_MODELS.map(m => <option key={m.id} value={m.id}>{m.name}</option>)
-                                    }
-                                </select>
-                                <ChevronDown size={16} className="absolute right-3 top-4 pointer-events-none text-gray-500"/>
-                            </div>
+                        {/* Gemini Key & Model Select */}
+                        <div className={`space-y-3 p-3 rounded-xl border ${settings.preferredProvider === 'gemini' ? 'border-[#00d4ff]/30 bg-[#00d4ff]/5' : 'border-white/5 opacity-50'}`}>
+                            <p className="text-[#00d4ff] text-[10px] font-bold uppercase tracking-wider">Google Gemini</p>
+                            <input 
+                                type="text" 
+                                placeholder="Gemini API Key" 
+                                value={settings.geminiKey || ''} 
+                                onChange={e => handleChange('geminiKey', e.target.value)} 
+                                className="w-full bg-[#0a0e17] text-white p-3 rounded-xl outline-none border border-white/10 text-xs font-mono"
+                            />
+                            <select 
+                                value={settings.geminiModel || 'gemini-2.5-flash'} 
+                                onChange={e => handleChange('geminiModel', e.target.value)}
+                                className="w-full bg-[#0a0e17] text-white p-3 rounded-xl outline-none border border-white/10 text-xs"
+                            >
+                                {geminiModels.map(m => <option key={m.id} value={m.id}>{m.name}</option>)}
+                            </select>
                         </div>
 
-                        {/* API KEY INPUTS */}
-                        {preferred === 'gemini' && (
-                            <div className="animate-slideUp">
-                                <p className="text-white text-xs font-bold mb-2 text-[#00d4ff]">Gemini API Key</p>
-                                <div className="relative"><input type="text" value={geminiKey} onChange={e => setGeminiKey(e.target.value)} className="w-full bg-[#0a0e17] text-white p-3 pl-10 rounded-xl outline-none border border-white/10 focus:border-[#00d4ff] text-xs font-mono" placeholder="AIzaSy..."/><Key size={14} className="absolute left-3 top-3.5 text-gray-500"/></div>
-                            </div>
-                        )}
-                        
-                        {preferred === 'groq' && (
-                            <div className="animate-slideUp">
-                                <p className="text-white text-xs font-bold mb-2 text-[#f55036]">Groq API Key</p>
-                                <div className="relative"><input type="text" value={groqKey} onChange={e => setGroqKey(e.target.value)} className="w-full bg-[#0a0e17] text-white p-3 pl-10 rounded-xl outline-none border border-white/10 focus:border-[#f55036] text-xs font-mono" placeholder="gsk_..."/><Key size={14} className="absolute left-3 top-3.5 text-gray-500"/></div>
-                            </div>
-                        )}
+                        {/* Groq Key & Model Select */}
+                        <div className={`space-y-3 p-3 rounded-xl border ${settings.preferredProvider === 'groq' ? 'border-[#f55036]/30 bg-[#f55036]/5' : 'border-white/5 opacity-50'}`}>
+                            <p className="text-[#f55036] text-[10px] font-bold uppercase tracking-wider">Groq Compound</p>
+                            <input 
+                                type="text" 
+                                placeholder="Groq API Key" 
+                                value={settings.groqKey || ''} 
+                                onChange={e => handleChange('groqKey', e.target.value)} 
+                                className="w-full bg-[#0a0e17] text-white p-3 rounded-xl outline-none border border-white/10 text-xs font-mono"
+                            />
+                            <select 
+                                value={settings.groqModel || 'llama-3.3-70b-versatile'} 
+                                onChange={e => handleChange('groqModel', e.target.value)}
+                                className="w-full bg-[#0a0e17] text-white p-3 rounded-xl outline-none border border-white/10 text-xs"
+                            >
+                                {groqModels.map(m => <option key={m.id} value={m.id}>{m.name}</option>)}
+                            </select>
+                        </div>
 
                         {/* Custom Prompt */}
                         <div>
-                            <p className="text-white text-xs font-bold mb-2 flex items-center gap-2"><FileText size={14} className="text-gray-400"/> Qo'shimcha Buyruq</p>
-                            <textarea rows={2} placeholder="AI ga maxsus shartlar..." value={customPrompt} onChange={e => setCustomPrompt(e.target.value)} className="w-full bg-[#0a0e17] text-white p-3 rounded-xl outline-none border border-white/10 focus:border-white/30 text-xs resize-none"/>
+                            <p className="text-white text-xs font-bold mb-2 flex items-center gap-2"><FileText size={14} className="text-yellow-500"/> Shaxsiy Yo'riqnoma</p>
+                            <textarea 
+                                rows={2} 
+                                value={settings.customPrompt || ''} 
+                                onChange={e => handleChange('customPrompt', e.target.value)}
+                                className="w-full bg-[#0a0e17] text-white p-3 rounded-xl outline-none border border-white/10 text-xs resize-none"
+                                placeholder="Masalan: Menga har doim o'zbek tilida va hazil bilan javob ber..."
+                            />
                         </div>
                     </div>
                 </div>
 
-                {/* 3. XAVFSIZLIK */}
+                {/* 3. SECURITY */}
                 <div className="mb-6">
                     <h3 className="text-gray-500 text-xs font-bold uppercase mb-3 ml-1">Xavfsizlik</h3>
-                    <div className="bg-[#141e3c] rounded-2xl overflow-hidden border border-white/5">
-                        <div className="p-4 border-b border-white/5">
-                            <div className="flex justify-between items-center mb-2">
-                                <div className="flex items-center gap-3"><div className="p-2 bg-white/5 rounded-lg"><Lock size={18} className="text-[#00d4ff]"/></div><span className="text-white text-sm font-bold">PIN Kod</span></div>
-                                <div className="relative inline-block w-10 h-6 align-middle select-none"><input type="checkbox" checked={!!pin} onChange={() => { if(pin) setPin(''); else setPin('0000'); }} className="hidden"/><div className={`block w-10 h-6 rounded-full cursor-pointer transition-colors ${pin ? 'bg-[#00d4ff]' : 'bg-gray-600'}`} onClick={() => { if(pin) setPin(''); else setPin('0000'); }}></div><div className={`absolute top-1 bg-white w-4 h-4 rounded-full transition-transform ${pin ? 'left-5' : 'left-1'}`}></div></div>
-                            </div>
-                            {pin && (<input type="number" placeholder="PIN (4 ta)" value={pin} onChange={e => { const val = e.target.value; if(val.length <= 4) setPin(val); }} className="w-full bg-[#0a0e17] text-white p-3 rounded-xl text-center tracking-[8px] font-mono outline-none border border-white/10 focus:border-[#00d4ff]"/>)}
+                    <div className="bg-[#141e3c] rounded-2xl overflow-hidden border border-white/5 p-4 space-y-4">
+                        <div className="flex justify-between items-center">
+                            <div className="flex items-center gap-3"><div className="p-2 bg-white/5 rounded-lg"><Lock size={18} className="text-[#00d4ff]"/></div><span className="text-white text-sm font-bold">PIN Kod</span></div>
+                            <button onClick={() => handleChange('pinCode', settings.pinCode ? null : '0000')} className={`w-10 h-6 rounded-full relative transition-colors ${settings.pinCode ? 'bg-[#00d4ff]' : 'bg-gray-600'}`}>
+                                <div className={`w-4 h-4 bg-white rounded-full absolute top-1 transition-all ${settings.pinCode ? 'left-5' : 'left-1'}`}></div>
+                            </button>
                         </div>
-                        <div className="p-4 flex justify-between items-center">
-                            <div className="flex items-center gap-3"><div className="p-2 bg-white/5 rounded-lg"><Fingerprint size={18} className="text-[#ff3366]"/></div><span className="text-white text-sm font-bold">Barmoq izi</span></div>
-                            <button onClick={() => setBiometrics(!biometrics)} className={`w-10 h-6 rounded-full relative transition-colors ${biometrics ? 'bg-[#ff3366]' : 'bg-gray-600'}`}><div className={`w-4 h-4 bg-white rounded-full absolute top-1 transition-all ${biometrics ? 'left-5' : 'left-1'}`}></div></button>
-                        </div>
+                        {settings.pinCode && (
+                            <input 
+                                type="number" 
+                                value={settings.pinCode} 
+                                onChange={e => handleChange('pinCode', e.target.value.slice(0,4))} 
+                                className="w-full bg-[#0a0e17] text-white p-3 rounded-xl text-center tracking-[8px] font-mono outline-none border border-[#00d4ff]/30"
+                            />
+                        )}
                     </div>
                 </div>
 
-                <button onClick={handleSave} className={`w-full py-4 rounded-2xl font-bold uppercase tracking-widest text-sm transition-all flex items-center justify-center gap-2 shadow-lg mb-10 ${isSaved ? 'bg-[#107c41] text-white' : 'bg-[#00d4ff] text-[#0a0e17]'}`}>
-                    {isSaved ? <CheckCircle size={20}/> : <Save size={20}/>} {isSaved ? "SAQLANDI" : "SOZLAMALARNI SAQLASH"}
+                {/* SAVE BUTTON */}
+                <button 
+                    onClick={handleSave} 
+                    disabled={!isChanged}
+                    className={`w-full py-4 rounded-2xl font-bold uppercase tracking-widest text-sm transition-all flex items-center justify-center gap-2 shadow-lg mb-10 
+                        ${isSaved ? 'bg-[#107c41] text-white' : isChanged ? 'bg-[#00d4ff] text-[#0a0e17]' : 'bg-gray-800 text-gray-500 cursor-not-allowed'}`}
+                >
+                    {isSaved ? <CheckCircle size={20}/> : <Save size={20}/>}
+                    {isSaved ? "SAQLANDI" : "SAQLASH"}
                 </button>
             </div>
         </div>
-    )
-}
-
+    );
+};
 // --- LOCK SCREEN ---
 const LockScreen = ({ correctPin, useBiometrics, onUnlock }: { correctPin: string, useBiometrics: boolean, onUnlock: () => void }) => {
     const [input, setInput] = useState('');
