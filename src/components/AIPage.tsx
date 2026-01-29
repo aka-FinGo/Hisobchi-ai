@@ -10,8 +10,8 @@ interface Props {
 interface ChatMessage {
   id: string;
   role: 'user' | 'assistant';
-  content: string; // Ekranda ko'rinadigan matn
-  actionResult?: any; // Bajarilgan amal natijasi (JSON)
+  content: string; 
+  actionResult?: any;
 }
 
 export default function AIPage({ data, onAddTransaction }: Props) {
@@ -24,7 +24,7 @@ export default function AIPage({ data, onAddTransaction }: Props) {
 
   useEffect(() => { if (scrollRef.current) scrollRef.current.scrollTop = scrollRef.current.scrollHeight; }, [messages]);
 
-  // --- 1. AQLLI PATTERNLAR (Tarixni o'rganish) ---
+  // --- 1. AQLLI PATTERNLAR ---
   const findSmartPatterns = (userInput: string): string => {
       const words = userInput.toLowerCase().split(/[\s,]+/).filter(w => w.length > 3);
       const hints: string[] = [];
@@ -40,12 +40,12 @@ export default function AIPage({ data, onAddTransaction }: Props) {
       return Array.from(new Set(hints)).join('; ');
   };
 
-  // --- 2. SYSTEM PROMPT (ENG MUHIM QISM) ---
+  // --- 2. SYSTEM PROMPT ---
   const getSystemContext = (userQuery: string) => {
     const today = new Date();
-    const currentMonth = today.toISOString().slice(0, 7); // YYYY-MM
+    const currentMonth = today.toISOString().slice(0, 7); 
     
-    // MOLIYAVIY HOLAT (AI tahlil qilishi uchun)
+    // MOLIYAVIY HOLAT
     const income = data.transactions.filter(t => t.type === 'income' && t.date.startsWith(currentMonth)).reduce((s, t) => s + t.amount, 0);
     const expense = data.transactions.filter(t => t.type === 'expense' && t.date.startsWith(currentMonth)).reduce((s, t) => s + t.amount, 0);
     const balance = income - expense;
@@ -78,14 +78,13 @@ export default function AIPage({ data, onAddTransaction }: Props) {
 
       VAZIFA: Foydalanuvchi so'rovini tushun va FAQAT JSON formatda javob qaytar.
 
-      --- JSON EXAMPLES (NAMUNALAR) ---
+      --- JSON FORMATLARI ---
 
       1. AMAL QO'SHISH (Transaction):
       {
         "type": "transaction",
         "items": [
-          {"amount": 50000, "type": "expense", "category": "Oziq-ovqat", "wallet": "Naqd", "date": "2024-01-29", "note": "Tushlik"},
-          {"amount": 2000000, "type": "income", "category": "Maosh", "wallet": "Plastik", "date": "2024-01-29", "note": "Avans"}
+          {"amount": 50000, "type": "expense", "category": "Oziq-ovqat", "wallet": "Naqd", "date": "2024-01-29", "note": "Tushlik"}
         ]
       }
 
@@ -98,31 +97,29 @@ export default function AIPage({ data, onAddTransaction }: Props) {
       3. TAHLIL VA MASLAHAT (Analysis):
       {
         "type": "analysis",
-        "text": "Sizning moliyaviy holatingiz barqaror. Bu oy kirim 5mln bo'ldi, lekin xarajatlar 3mln ga yetdi. Ayniqsa Oziq-ovqatga ko'p ketyapti. Maslahatim: kunlik xarajatni 100k dan oshirmaslikka harakat qiling."
+        "text": "Sizning holatingiz..."
       }
 
       QOIDALAR:
-      - Hech qanday "```json" belgisi ishlatma. Faqat toza JSON.
-      - "Analysis" paytida yuqoridagi "MOLIYAVIY HISOBOT" ma'lumotlariga tayanib, aqlli maslahat ber.
+      - Hech qanday markdown kod belgilarini (uchta qo'shtirnoq) ishlatma. Faqat toza JSON matni bo'lsin.
+      - Tahlil paytida aniq raqamlarga tayanib maslahat ber.
     `;
   };
-  // --- 3. API CALL (MODERN MODELS) ---
+
+  // --- 3. API CALL ---
   const callAIProvider = async (provider: string, key: string, prompt: string, userMsg: string) => {
       console.log(`📡 Sending to ${provider}...`);
       
       try {
           if (provider === 'gemini') {
-              // GEMINI 2.0 FLASH (Experimental) yoki 1.5 Flash
-              const modelVersion = 'gemini-2.0-flash-exp'; 
-              
-              const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${modelVersion}:generateContent?key=${key}`, {
+              // Gemini 2.0 Flash (Experimental)
+              const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-exp:generateContent?key=${key}`, {
                   method: 'POST', 
                   headers: { 'Content-Type': 'application/json' },
                   body: JSON.stringify({ contents: [{ role: 'user', parts: [{ text: prompt + `\n\nUSER QUERY: ${userMsg}` }] }] })
               });
 
               if (!res.ok) {
-                   // Agar 2.0 da xato bo'lsa, 1.5 ga o'tishimiz mumkin (Fallback logic handleSend da bo'ladi)
                    const errText = await res.text();
                    throw new Error(`Gemini Error ${res.status}: ${errText}`);
               }
@@ -130,14 +127,14 @@ export default function AIPage({ data, onAddTransaction }: Props) {
               return json.candidates?.[0]?.content?.parts?.[0]?.text;
           } 
           else if (provider === 'groq') {
-              // GROQ (LLAMA 3.3 - Eng yangi va kuchli)
+              // Groq Llama 3.3
               const res = await fetch('[https://api.groq.com/openai/v1/chat/completions](https://api.groq.com/openai/v1/chat/completions)', {
                   method: 'POST', 
                   headers: { 'Authorization': `Bearer ${key}`, 'Content-Type': 'application/json' },
                   body: JSON.stringify({ 
-                      model: "llama-3.3-70b-versatile", // Yoki "llama3-8b-8192" tezlik uchun
+                      model: "llama-3.3-70b-versatile",
                       messages: [{ role: "system", content: prompt }, { role: "user", content: userMsg }],
-                      response_format: { type: "json_object" } // Groq JSON Mode
+                      response_format: { type: "json_object" }
                   })
               });
 
@@ -171,11 +168,11 @@ export default function AIPage({ data, onAddTransaction }: Props) {
         const preferred = data.settings.preferredProvider;
         const providers = [];
         
-        // Priority navbati
         if (preferred === 'gemini' && geminiKey) providers.push({ name: 'gemini', key: geminiKey });
         if (preferred === 'groq' && groqKey) providers.push({ name: 'groq', key: groqKey });
-        if (preferred !== 'gemini' && geminiKey) providers.push({ name: 'gemini', key: geminiKey }); // Fallback
-        if (preferred !== 'groq' && groqKey) providers.push({ name: 'groq', key: groqKey }); // Fallback
+        // Fallback
+        if (preferred !== 'gemini' && geminiKey) providers.push({ name: 'gemini', key: geminiKey });
+        if (preferred !== 'groq' && groqKey) providers.push({ name: 'groq', key: groqKey });
 
         let aiText = "";
         let success = false;
@@ -190,14 +187,15 @@ export default function AIPage({ data, onAddTransaction }: Props) {
 
         if (!success) throw new Error(`Barcha urinishlar xato berdi.\n${lastError}`);
 
-        // --- JSON PARSING (Universal) ---
+        // --- JSON PARSING ---
         let processedMsg: ChatMessage = { id: (Date.now()+1).toString(), role: 'assistant', content: "..." };
+        // Clean JSON (Markdown belgilarini olib tashlaymiz)
         let cleanJson = aiText.replace(/```json/g, '').replace(/```/g, '').trim();
         
         try {
             const result = JSON.parse(cleanJson);
 
-            // 1. HOLAT: AMAL QO'SHISH (Items Array)
+            // 1. Transaction
             if (result.type === 'transaction' && Array.isArray(result.items)) {
                 let addedCount = 0;
                 let totalAmount = 0;
@@ -223,7 +221,7 @@ export default function AIPage({ data, onAddTransaction }: Props) {
                 processedMsg.actionResult = { type: 'transaction', count: addedCount, total: totalAmount };
             }
             
-            // 2. HOLAT: QIDIRUV
+            // 2. Search
             else if (result.type === 'search') {
                 const query = result.query.toLowerCase();
                 const items = data.transactions.filter(t => 
@@ -234,15 +232,15 @@ export default function AIPage({ data, onAddTransaction }: Props) {
                 processedMsg.actionResult = { type: 'search', items };
             }
 
-            // 3. HOLAT: TAHLIL YOKI SUHBAT
+            // 3. Analysis
             else if (result.type === 'analysis') {
-                processedMsg.content = result.text; // AI yozgan tahliliy matn
+                processedMsg.content = result.text;
                 processedMsg.actionResult = { type: 'analysis' };
             }
 
         } catch (e) {
             console.error("JSON Parse Error:", e);
-            processedMsg.content = aiText; // JSON bo'lmasa matnni o'zini chiqaramiz
+            processedMsg.content = aiText; // JSON bo'lmasa matnni chiqaramiz
         }
         
         setMessages(prev => [...prev, processedMsg]);
@@ -268,8 +266,6 @@ export default function AIPage({ data, onAddTransaction }: Props) {
                           {msg.content.startsWith('⚠️') ? <span className="text-red-400 font-bold">{msg.content}</span> : msg.content}
                       </div>
 
-                      {/* --- RESULT UI --- */}
-                      
                       {msg.actionResult?.type === 'transaction' && (
                           <div className="bg-[#107c41]/20 border border-[#107c41]/50 p-3 rounded-xl flex items-center gap-3 animate-slideUp">
                               <ListChecks className="text-[#107c41]" size={20}/>
