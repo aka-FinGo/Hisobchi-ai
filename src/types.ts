@@ -27,6 +27,7 @@ export interface AppSettings {
   preferredProvider: 'gemini' | 'groq';
   
   // Model nomlari (String qilib qo'ydim, chunki ro'yxat juda uzun va o'zgaruvchan)
+  customPrompt?: string;
   geminiModel: string; 
   groqModel: string;
 }
