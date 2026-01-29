@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
-import { Send, Bot, User, Sparkles, Loader2, CheckCircle, Wallet, History } from 'lucide-react';
+import { Send, Bot, User, Sparkles, Loader2, CheckCircle } from 'lucide-react';
 import { AppData, Transaction } from '../types';
 
 interface Props { data: AppData; onAddTransaction: (tx: Transaction) => void; }
@@ -13,7 +13,7 @@ export default function AIPage({ data, onAddTransaction }: Props) {
 
   useEffect(() => { if (scrollRef.current) scrollRef.current.scrollTop = scrollRef.current.scrollHeight; }, [messages]);
 
-  // --- 1. CONTEXT TAYYORLASH (AI sizning holatingizni ko'rishi uchun) ---
+  // --- 1. CONTEXT TAYYORLASH ---
   const getSystemContext = (userQuery: string) => {
     const today = new Date();
     const currentMonth = today.toISOString().slice(0, 7);
@@ -22,7 +22,7 @@ export default function AIPage({ data, onAddTransaction }: Props) {
     const income = data.transactions.filter(t => t.type === 'income' && t.date.startsWith(currentMonth)).reduce((s, t) => s + t.amount, 0);
     const expense = data.transactions.filter(t => t.type === 'expense' && t.date.startsWith(currentMonth)).reduce((s, t) => s + t.amount, 0);
     
-    // Oxirgi 10 ta operatsiya (AI "bo'm-bo'sh" demasligi uchun)
+    // Oxirgi 10 ta operatsiya
     const recentTx = data.transactions.slice(0, 10).map(t => 
         `- ${t.date}: ${t.type === 'income' ? '+' : '-'}${t.amount} (${data.categories.find(c => c.id === t.categoryId)?.name}) - ${t.note || ''}`
     ).join('\n');
@@ -30,6 +30,7 @@ export default function AIPage({ data, onAddTransaction }: Props) {
     const catList = data.categories.map(c => c.name).join(', ');
     const walletList = data.wallets.map(w => w.name).join(', ');
 
+    // DIQQAT: Pastdagi promptda backtick (`) muammosini hal qildik
     return `
       Sen professional moliyaviy yordamchisan. Bugun: ${today.toISOString().split('T')[0]}.
       
@@ -54,13 +55,12 @@ export default function AIPage({ data, onAddTransaction }: Props) {
       
       3. AGAR foydalanuvchi "Ahvolim qanday?", "Maslahat ber" yoki oddiy gapirsa -> ODDIY MATN (Text) qaytar. Zinhor JSON ishlatma.
 
-      Javobingda hech qachon "JSON:" yoki "```json" deb yozma, faqat toza kod yoki toza matn bo'lsin.
+      Javobingda hech qachon markdown kod belgilarini (uchta backtick) ishlatma, faqat toza kod yoki toza matn bo'lsin.
     `;
   };
 
   // --- 2. AI CAll ---
   const callAIProvider = async (provider: string, key: string, prompt: string, userMsg: string) => {
-      // (Bu qism o'zgarishsiz, oldingi kod bilan bir xil)
       if (provider === 'gemini') {
           const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${key}`, {
               method: 'POST', headers: { 'Content-Type': 'application/json' },
@@ -89,7 +89,6 @@ export default function AIPage({ data, onAddTransaction }: Props) {
     try {
         const systemPrompt = getSystemContext(userMsg.content);
         
-        // Provayder tanlash logikasi (o'sha-o'sha)
         const preferred = data.settings.preferredProvider;
         const providers = [];
         if (preferred === 'gemini' && data.settings.geminiKey) providers.push({ name: 'gemini', key: data.settings.geminiKey });
@@ -127,13 +126,13 @@ export default function AIPage({ data, onAddTransaction }: Props) {
                      const newTx = { id: Date.now().toString(), amount: parseFloat(actionData.amount), type: actionData.type, walletId: matchedWallet.id, categoryId: matchedCat.id, date: actionData.date || new Date().toISOString().split('T')[0], note: actionData.note || 'AI' };
                      
                      onAddTransaction(newTx);
-                     processedMsg.content = `✅ ${newTx.amount.toLocaleString()} so'm qo'shildi.`; // Foydalanuvchiga JSON emas, chiroyli tekst ko'rsatamiz
+                     processedMsg.content = `✅ ${newTx.amount.toLocaleString()} so'm qo'shildi.`; 
                      processedMsg.actionResult = { type: 'success', tx: newTx };
                 } 
                 else if (actionData.action === 'search') {
                      const query = actionData.query.toLowerCase();
                      const results = data.transactions.filter(t => t.note?.toLowerCase().includes(query) || data.categories.find(c => c.id === t.categoryId)?.name.toLowerCase().includes(query)).slice(0,5);
-                     processedMsg.content = `🔎 "${query}" bo'yicha qidiruv natijalari:`; // JSON o'rniga tekst
+                     processedMsg.content = `🔎 "${query}" bo'yicha qidiruv natijalari:`; 
                      processedMsg.actionResult = { type: 'search', items: results };
                 }
             } catch (e) {
@@ -157,7 +156,6 @@ export default function AIPage({ data, onAddTransaction }: Props) {
               <div key={msg.id} className={`flex gap-3 ${msg.role === 'user' ? 'flex-row-reverse' : ''}`}>
                   <div className={`w-8 h-8 rounded-full flex items-center justify-center shrink-0 ${msg.role === 'user' ? 'bg-[#00d4ff]' : 'bg-[#bb86fc]'}`}>{msg.role === 'user' ? <User size={16} className="text-[#0a0e17]"/> : <Bot size={16} className="text-[#0a0e17]"/>}</div>
                   <div className={`max-w-[80%] space-y-2`}>
-                      {/* Faqat JSON bo'lmagan qismini ko'rsatamiz */}
                       <div className={`p-3 rounded-2xl text-sm leading-relaxed whitespace-pre-wrap ${msg.role === 'user' ? 'bg-[#00d4ff]/10 text-white rounded-tr-none border border-[#00d4ff]/20' : 'bg-[#141e3c] text-gray-200 rounded-tl-none border border-white/5'}`}>{msg.content}</div>
                       
                       {msg.actionResult?.type === 'success' && (<div className="bg-[#107c41]/20 border border-[#107c41]/50 p-3 rounded-xl flex items-center gap-3 animate-slideUp"><CheckCircle className="text-[#107c41]" size={20}/><div><p className="text-white text-xs font-bold">Saqlandi</p><p className="text-gray-400 text-[10px]">{msg.actionResult.tx.amount.toLocaleString()} | {msg.actionResult.tx.note}</p></div></div>)}
