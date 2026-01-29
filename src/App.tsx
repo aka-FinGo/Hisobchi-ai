@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { App as CapacitorApp } from '@capacitor/app';
-import { NativeBiometric } from '@capgo/capacitor-native-biometric'; 
-import { Home, BarChart2, Plus, Sparkles, User, Lock, Shield, Fingerprint, Key, Camera, Server, Save, CheckCircle, FileText, LogOut } from 'lucide-react';
+import { NativeBiometric } from '@capgo/capacitor-native-biometric';
+import { Home, BarChart2, Plus, Sparkles, User, Lock, Shield, Fingerprint, Key, Camera, Server, Save, CheckCircle, FileText, LogOut, ChevronDown } from 'lucide-react';
 import { loadData, saveData } from './storage';
 import { AppData, Transaction, Wallet, FilterState } from './types';
 
@@ -12,6 +12,25 @@ import TransactionDetailModal from './components/TransactionDetailModal';
 import StatsPage from './components/StatsPage';
 import AIPage from './components/AIPage';
 
+// --- MODELLAR RO'YXATI (Siz bergan ro'yxat asosida) ---
+const GEMINI_MODELS = [
+    { id: 'gemini-2.5-flash', name: 'Gemini 2.5 Flash (Tavsiya)' },
+    { id: 'gemini-2.5-flash-lite', name: 'Gemini 2.5 Flash Lite' },
+    { id: 'gemini-3-flash', name: 'Gemini 3 Flash (Experimental)' },
+    { id: 'gemma-3-27b-it', name: 'Gemma 3 (27B)' },
+    { id: 'gemma-3-12b-it', name: 'Gemma 3 (12B)' },
+    { id: 'gemini-1.5-flash', name: 'Gemini 1.5 Flash (Stabil)' },
+];
+
+const GROQ_MODELS = [
+    { id: 'meta-llama/llama-4-scout-17b-16e-instruct', name: 'Llama 4 Scout (17B) - New!' },
+    { id: 'openai/gpt-oss-120b', name: 'GPT-OSS (120B)' },
+    { id: 'groq/compound', name: 'Groq Compound' },
+    { id: 'llama-3.3-70b-versatile', name: 'Llama 3.3 (70B) Versatile' },
+    { id: 'llama3-8b-8192', name: 'Llama 3 (8B) - Juda Tez' },
+    { id: 'mixtral-8x7b-32768', name: 'Mixtral 8x7B' },
+];
+
 // --- PROFIL SAHIFASI ---
 const ProfilePage = ({ data, onUpdateSettings }: { data: AppData, onUpdateSettings: (s: any) => void }) => {
     const [name, setName] = useState(data.settings.userName || '');
@@ -21,23 +40,31 @@ const ProfilePage = ({ data, onUpdateSettings }: { data: AppData, onUpdateSettin
     // AI STATE
     const [geminiKey, setGeminiKey] = useState(data.settings.geminiKey || '');
     const [groqKey, setGroqKey] = useState(data.settings.groqKey || '');
-    const [preferred, setPreferred] = useState(data.settings.preferredProvider || 'gemini');
+    const [preferred, setPreferred] = useState<'gemini' | 'groq'>(data.settings.preferredProvider || 'gemini');
+    const [aiModel, setAiModel] = useState(data.settings.aiModel || 'gemini-2.5-flash');
     const [customPrompt, setCustomPrompt] = useState(data.settings.customPrompt || '');
     
     const [isSaved, setIsSaved] = useState(false);
 
+    // Provayder o'zgarganda, modelni ham o'sha provayderning birinchi modeliga o'tkazib qo'yamiz
+    const handleProviderChange = (newProvider: 'gemini' | 'groq') => {
+        setPreferred(newProvider);
+        if (newProvider === 'gemini') setAiModel(GEMINI_MODELS[0].id);
+        else setAiModel(GROQ_MODELS[0].id);
+    };
+
     const handleSave = () => {
-        const newSettings = {
+        onUpdateSettings({
             ...data.settings,
             userName: name,
-            pinCode: pin && pin.length === 4 ? pin : null, // Faqat 4 xonali bo'lsa saqlaymiz
+            pinCode: pin && pin.length === 4 ? pin : null,
             useBiometrics: biometrics,
             geminiKey,
             groqKey,
             preferredProvider: preferred,
+            aiModel,
             customPrompt
-        };
-        onUpdateSettings(newSettings);
+        });
         setIsSaved(true);
         setTimeout(() => setIsSaved(false), 2000);
     };
@@ -58,31 +85,64 @@ const ProfilePage = ({ data, onUpdateSettings }: { data: AppData, onUpdateSettin
                     <input value={name} onChange={e => setName(e.target.value)} className="bg-transparent text-center text-xl font-bold text-white outline-none border-b border-transparent focus:border-[#00d4ff] pb-1 w-2/3" placeholder="Ismingiz"/>
                 </div>
 
-                {/* 2. AI SOZLAMALARI */}
+                {/* 2. AI SOZLAMALARI (SELECT MENYU BILAN) */}
                 <div className="mb-6">
-                    <h3 className="text-gray-500 text-xs font-bold uppercase mb-3 ml-1">AI Sozlamalari</h3>
+                    <h3 className="text-gray-500 text-xs font-bold uppercase mb-3 ml-1">AI Miyasi</h3>
                     <div className="bg-[#141e3c] p-4 rounded-2xl border border-white/5 space-y-5">
-                        {/* Provayder */}
+                        
+                        {/* PROVAYDER SELECT */}
                         <div>
-                            <p className="text-white text-xs font-bold mb-2 flex items-center gap-2"><Server size={14} className="text-[#00ff9d]"/> Asosiy AI</p>
-                            <div className="flex bg-[#0a0e17] rounded-xl p-1 border border-white/10">
-                                <button onClick={() => setPreferred('gemini')} className={`flex-1 py-2 rounded-lg text-xs font-bold transition-all ${preferred === 'gemini' ? 'bg-[#00d4ff] text-[#0a0e17]' : 'text-gray-500'}`}>Gemini</button>
-                                <button onClick={() => setPreferred('groq')} className={`flex-1 py-2 rounded-lg text-xs font-bold transition-all ${preferred === 'groq' ? 'bg-[#f55036] text-white' : 'text-gray-500'}`}>Groq</button>
+                            <p className="text-white text-xs font-bold mb-2 flex items-center gap-2"><Server size={14} className="text-[#00ff9d]"/> Asosiy Provayder</p>
+                            <div className="relative">
+                                <select 
+                                    value={preferred} 
+                                    onChange={(e) => handleProviderChange(e.target.value as any)}
+                                    className="w-full bg-[#0a0e17] text-white p-3 rounded-xl outline-none border border-white/10 focus:border-[#00ff9d] text-sm appearance-none"
+                                >
+                                    <option value="gemini">Google Gemini AI</option>
+                                    <option value="groq">Groq (Llama / Mixtral)</option>
+                                </select>
+                                <ChevronDown size={16} className="absolute right-3 top-4 pointer-events-none text-gray-500"/>
                             </div>
                         </div>
-                        {/* Kalitlar */}
+
+                        {/* MODEL SELECT (Dinamik o'zgaradi) */}
                         <div>
-                            <p className="text-white text-xs font-bold mb-2 text-[#00d4ff]">Gemini Key</p>
-                            <input type="text" value={geminiKey} onChange={e => setGeminiKey(e.target.value)} className="w-full bg-[#0a0e17] text-white p-3 rounded-xl outline-none border border-white/10 focus:border-[#00d4ff] text-xs font-mono" placeholder="AIzaSy..."/>
+                            <p className="text-white text-xs font-bold mb-2 flex items-center gap-2"><Sparkles size={14} className="text-yellow-500"/> Modelni Tanlang</p>
+                            <div className="relative">
+                                <select 
+                                    value={aiModel} 
+                                    onChange={(e) => setAiModel(e.target.value)}
+                                    className="w-full bg-[#0a0e17] text-white p-3 rounded-xl outline-none border border-white/10 focus:border-yellow-500 text-sm appearance-none"
+                                >
+                                    {preferred === 'gemini' 
+                                        ? GEMINI_MODELS.map(m => <option key={m.id} value={m.id}>{m.name}</option>)
+                                        : GROQ_MODELS.map(m => <option key={m.id} value={m.id}>{m.name}</option>)
+                                    }
+                                </select>
+                                <ChevronDown size={16} className="absolute right-3 top-4 pointer-events-none text-gray-500"/>
+                            </div>
                         </div>
-                        <div>
-                            <p className="text-white text-xs font-bold mb-2 text-[#f55036]">Groq Key</p>
-                            <input type="text" value={groqKey} onChange={e => setGroqKey(e.target.value)} className="w-full bg-[#0a0e17] text-white p-3 rounded-xl outline-none border border-white/10 focus:border-[#f55036] text-xs font-mono" placeholder="gsk_..."/>
-                        </div>
+
+                        {/* API KEY INPUTS */}
+                        {preferred === 'gemini' && (
+                            <div className="animate-slideUp">
+                                <p className="text-white text-xs font-bold mb-2 text-[#00d4ff]">Gemini API Key</p>
+                                <div className="relative"><input type="text" value={geminiKey} onChange={e => setGeminiKey(e.target.value)} className="w-full bg-[#0a0e17] text-white p-3 pl-10 rounded-xl outline-none border border-white/10 focus:border-[#00d4ff] text-xs font-mono" placeholder="AIzaSy..."/><Key size={14} className="absolute left-3 top-3.5 text-gray-500"/></div>
+                            </div>
+                        )}
+                        
+                        {preferred === 'groq' && (
+                            <div className="animate-slideUp">
+                                <p className="text-white text-xs font-bold mb-2 text-[#f55036]">Groq API Key</p>
+                                <div className="relative"><input type="text" value={groqKey} onChange={e => setGroqKey(e.target.value)} className="w-full bg-[#0a0e17] text-white p-3 pl-10 rounded-xl outline-none border border-white/10 focus:border-[#f55036] text-xs font-mono" placeholder="gsk_..."/><Key size={14} className="absolute left-3 top-3.5 text-gray-500"/></div>
+                            </div>
+                        )}
+
                         {/* Custom Prompt */}
                         <div>
-                            <p className="text-white text-xs font-bold mb-2 flex items-center gap-2"><FileText size={14} className="text-yellow-500"/> Qo'shimcha Buyruq (Prompt)</p>
-                            <textarea rows={3} placeholder="Masalan: Meni sen bilan qattiqqo'l bo'l, ortiqcha pul ishlatishga qo'yma..." value={customPrompt} onChange={e => setCustomPrompt(e.target.value)} className="w-full bg-[#0a0e17] text-white p-3 rounded-xl outline-none border border-white/10 focus:border-yellow-500 text-xs resize-none"/>
+                            <p className="text-white text-xs font-bold mb-2 flex items-center gap-2"><FileText size={14} className="text-gray-400"/> Qo'shimcha Buyruq</p>
+                            <textarea rows={2} placeholder="AI ga maxsus shartlar..." value={customPrompt} onChange={e => setCustomPrompt(e.target.value)} className="w-full bg-[#0a0e17] text-white p-3 rounded-xl outline-none border border-white/10 focus:border-white/30 text-xs resize-none"/>
                         </div>
                     </div>
                 </div>
@@ -91,7 +151,6 @@ const ProfilePage = ({ data, onUpdateSettings }: { data: AppData, onUpdateSettin
                 <div className="mb-6">
                     <h3 className="text-gray-500 text-xs font-bold uppercase mb-3 ml-1">Xavfsizlik</h3>
                     <div className="bg-[#141e3c] rounded-2xl overflow-hidden border border-white/5">
-                        {/* PIN */}
                         <div className="p-4 border-b border-white/5">
                             <div className="flex justify-between items-center mb-2">
                                 <div className="flex items-center gap-3"><div className="p-2 bg-white/5 rounded-lg"><Lock size={18} className="text-[#00d4ff]"/></div><span className="text-white text-sm font-bold">PIN Kod</span></div>
@@ -99,7 +158,6 @@ const ProfilePage = ({ data, onUpdateSettings }: { data: AppData, onUpdateSettin
                             </div>
                             {pin && (<input type="number" placeholder="PIN (4 ta)" value={pin} onChange={e => { const val = e.target.value; if(val.length <= 4) setPin(val); }} className="w-full bg-[#0a0e17] text-white p-3 rounded-xl text-center tracking-[8px] font-mono outline-none border border-white/10 focus:border-[#00d4ff]"/>)}
                         </div>
-                        {/* Barmoq Izi */}
                         <div className="p-4 flex justify-between items-center">
                             <div className="flex items-center gap-3"><div className="p-2 bg-white/5 rounded-lg"><Fingerprint size={18} className="text-[#ff3366]"/></div><span className="text-white text-sm font-bold">Barmoq izi</span></div>
                             <button onClick={() => setBiometrics(!biometrics)} className={`w-10 h-6 rounded-full relative transition-colors ${biometrics ? 'bg-[#ff3366]' : 'bg-gray-600'}`}><div className={`w-4 h-4 bg-white rounded-full absolute top-1 transition-all ${biometrics ? 'left-5' : 'left-1'}`}></div></button>
@@ -115,46 +173,35 @@ const ProfilePage = ({ data, onUpdateSettings }: { data: AppData, onUpdateSettin
     )
 }
 
-// --- LOCK SCREEN (Biometrik Avto-Start bilan) ---
+// --- LOCK SCREEN ---
 const LockScreen = ({ correctPin, useBiometrics, onUnlock }: { correctPin: string, useBiometrics: boolean, onUnlock: () => void }) => {
     const [input, setInput] = useState('');
     const [error, setError] = useState(false);
 
-    // Barmoq izini tekshirish
     const checkBiometric = async () => {
         if (!useBiometrics) return;
         try {
             const result = await NativeBiometric.isAvailable();
             if (result.isAvailable) {
                 await NativeBiometric.verifyIdentity({
-                    reason: "Hisobchi AI ga kirish",
+                    reason: "Hisobchi AI",
                     title: "Kirish",
-                    subtitle: "Barmoq izi bilan tasdiqlang",
-                    description: "Tasdiqlash uchun bosing"
+                    subtitle: "Tasdiqlang",
+                    description: "Barmoq izi"
                 });
-                onUnlock(); // Muvaffaqiyatli
+                onUnlock();
             }
-        } catch (e) {
-            console.log("Biometrik bekor qilindi", e);
-        }
+        } catch (e) { console.log("Biometric canceled"); }
     };
 
-    // Sahifa ochilishi bilan darhol barmoq izini so'raymiz
-    useEffect(() => {
-        if(useBiometrics) checkBiometric();
-    }, []);
+    useEffect(() => { if(useBiometrics) checkBiometric(); }, []);
 
     const handleInput = (val: string) => {
         const newVal = input + val;
         setInput(newVal);
         if (newVal.length === correctPin.length) {
-            // String qilib solishtiramiz (xatolikni oldini olish uchun)
-            if (String(newVal) === String(correctPin)) {
-                onUnlock();
-            } else {
-                setError(true);
-                setTimeout(() => { setInput(''); setError(false); }, 500);
-            }
+            if (String(newVal) === String(correctPin)) onUnlock();
+            else { setError(true); setTimeout(() => { setInput(''); setError(false); }, 500); }
         }
     }
 
@@ -162,27 +209,9 @@ const LockScreen = ({ correctPin, useBiometrics, onUnlock }: { correctPin: strin
         <div className="fixed inset-0 z-[300] bg-[#05070a] flex flex-col items-center justify-center animate-slideUp">
             <div className="p-4 bg-[#141e3c] rounded-full mb-8" onClick={checkBiometric}><Lock size={32} className="text-[#00d4ff]"/></div>
             <h2 className="text-white font-bold text-xl mb-8">Parolni kiriting</h2>
-            
-            <div className="flex gap-4 mb-10">
-                {[...Array(correctPin.length)].map((_, i) => (
-                    <div key={i} className={`w-4 h-4 rounded-full border border-[#00d4ff] ${i < input.length ? 'bg-[#00d4ff]' : ''} ${error ? 'animate-bounce bg-red-500 border-red-500' : ''}`}></div>
-                ))}
-            </div>
-
-            <div className="grid grid-cols-3 gap-6">
-                {[1,2,3,4,5,6,7,8,9].map(n => (
-                    <button key={n} onClick={() => handleInput(n.toString())} className="w-16 h-16 rounded-full bg-[#141e3c] text-white font-bold text-xl active:scale-90">{n}</button>
-                ))}
-                <div/>
-                <button onClick={() => handleInput('0')} className="w-16 h-16 rounded-full bg-[#141e3c] text-white font-bold text-xl active:scale-90">0</button>
-                <button onClick={() => setInput(input.slice(0,-1))} className="w-16 h-16 rounded-full text-gray-500 flex items-center justify-center active:scale-90">⬅️</button>
-            </div>
-
-            {useBiometrics && (
-                <button onClick={checkBiometric} className="mt-8 text-[#00d4ff] text-sm font-bold flex items-center gap-2 animate-pulse">
-                    <Fingerprint size={20}/> Barmoq izi bilan kirish
-                </button>
-            )}
+            <div className="flex gap-4 mb-10">{[...Array(correctPin.length)].map((_, i) => (<div key={i} className={`w-4 h-4 rounded-full border border-[#00d4ff] ${i < input.length ? 'bg-[#00d4ff]' : ''} ${error ? 'animate-bounce bg-red-500 border-red-500' : ''}`}></div>))}</div>
+            <div className="grid grid-cols-3 gap-6">{[1,2,3,4,5,6,7,8,9].map(n => (<button key={n} onClick={() => handleInput(n.toString())} className="w-16 h-16 rounded-full bg-[#141e3c] text-white font-bold text-xl active:scale-90">{n}</button>))}<div/><button onClick={() => handleInput('0')} className="w-16 h-16 rounded-full bg-[#141e3c] text-white font-bold text-xl active:scale-90">0</button><button onClick={() => setInput(input.slice(0,-1))} className="w-16 h-16 rounded-full text-gray-500 flex items-center justify-center active:scale-90">⬅️</button></div>
+            {useBiometrics && (<button onClick={checkBiometric} className="mt-8 text-[#00d4ff] text-sm font-bold flex items-center gap-2 animate-pulse"><Fingerprint size={20}/> Barmoq izi bilan kirish</button>)}
         </div>
     )
 }
@@ -193,10 +222,8 @@ function App() {
   const [activeTab, setActiveTab] = useState<TabType>('home');
   const [historyStack, setHistoryStack] = useState<TabType[]>([]);
   
-  // Dastur ochilganda PIN kod bormi yo'qmi tekshiramiz
   const [isLocked, setIsLocked] = useState(!!(data.settings?.pinCode && data.settings.pinCode.length === 4));
 
-  // Modallar
   const [isTxModalOpen, setIsTxModalOpen] = useState(false);
   const [isWalletModalOpen, setIsWalletModalOpen] = useState(false);
   const [editingTx, setEditingTx] = useState<Transaction | null>(null);
@@ -205,13 +232,11 @@ function App() {
   const [contextMenu, setContextMenu] = useState<{ x: number, y: number, item: any, type: 'wallet' | 'tx' } | null>(null);
   const [statsFilter, setStatsFilter] = useState<FilterState | null>(null);
 
-  // Ma'lumot o'zgarsa, darhol xotiraga yozamiz
   useEffect(() => { saveData(data); }, [data]);
 
-  // Back Button Logic (Android uchun)
   useEffect(() => {
     CapacitorApp.addListener('backButton', () => {
-      if (isLocked) return; // Qulflangan bo'lsa ishlamasin
+      if (isLocked) return;
       if (isTxModalOpen || isWalletModalOpen || detailTx || contextMenu) {
          setIsTxModalOpen(false); setIsWalletModalOpen(false); setDetailTx(null); setContextMenu(null);
          return;
@@ -226,152 +251,28 @@ function App() {
     });
   }, [isTxModalOpen, isWalletModalOpen, detailTx, contextMenu, historyStack, activeTab, isLocked]);
 
-  // --- HANDLERS ---
   const refreshData = () => { setData(loadData()); };
+  const handleWalletSave = (wallet: Wallet) => { if (editingWallet) setData({ ...data, wallets: data.wallets.map(w => w.id === wallet.id ? wallet : w) }); else setData({ ...data, wallets: [...data.wallets, wallet] }); setIsWalletModalOpen(false); setEditingWallet(null); };
+  const handleTransactionSave = (txData: Transaction) => { let newTx = [...data.transactions]; let newW = [...data.wallets]; if (editingTx) { const old = data.transactions.find(t => t.id === editingTx.id); if(old) { newW = newW.map(w => w.id === old.walletId ? { ...w, balance: w.balance + (old.type === 'income' ? -old.amount : old.amount) } : w); newTx = newTx.filter(t => t.id !== editingTx.id); } } const finalTx = { ...txData, id: txData.id || Date.now().toString() }; newTx.push(finalTx); newW = newW.map(w => w.id === finalTx.walletId ? { ...w, balance: w.balance + (finalTx.type === 'income' ? finalTx.amount : -finalTx.amount) } : w); setData({ ...data, transactions: newTx, wallets: newW }); setIsTxModalOpen(false); setEditingTx(null); setDetailTx(null); };
+  const handleDeleteTx = (id: string) => { if(!confirm("O'chirilsinmi?")) return; const tx = data.transactions.find(t => t.id === id); if(!tx) return; const newW = data.wallets.map(w => w.id === tx.walletId ? { ...w, balance: w.balance + (tx.type === 'income' ? -tx.amount : tx.amount) } : w); setData({ ...data, transactions: data.transactions.filter(t => t.id !== id), wallets: newW }); setContextMenu(null); setDetailTx(null); };
+  const handleDeleteWallet = (id: string) => { if(!confirm("Hamyon o'chirilsinmi?")) return; setData({ ...data, wallets: data.wallets.filter(w => w.id !== id), transactions: data.transactions.filter(t => t.walletId !== id) }); setContextMenu(null); };
+  const handleJumpToFilter = (filter: FilterState) => { setStatsFilter(filter); setDetailTx(null); setActiveTab('stats'); };
 
-  const handleWalletSave = (wallet: Wallet) => {
-    if (editingWallet) setData({ ...data, wallets: data.wallets.map(w => w.id === wallet.id ? wallet : w) });
-    else setData({ ...data, wallets: [...data.wallets, wallet] });
-    setIsWalletModalOpen(false); setEditingWallet(null);
-  };
+  if (isLocked && data.settings?.pinCode) return <LockScreen correctPin={data.settings.pinCode} useBiometrics={data.settings.useBiometrics} onUnlock={() => setIsLocked(false)} />;
 
-  const handleTransactionSave = (txData: Transaction) => {
-    let newTx = [...data.transactions];
-    let newW = [...data.wallets];
-    if (editingTx) { 
-       const old = data.transactions.find(t => t.id === editingTx.id);
-       if(old) {
-          newW = newW.map(w => w.id === old.walletId ? { ...w, balance: w.balance + (old.type === 'income' ? -old.amount : old.amount) } : w);
-          newTx = newTx.filter(t => t.id !== editingTx.id);
-       }
-    }
-    const finalTx = { ...txData, id: txData.id || Date.now().toString() };
-    newTx.push(finalTx);
-    newW = newW.map(w => w.id === finalTx.walletId ? { ...w, balance: w.balance + (finalTx.type === 'income' ? finalTx.amount : -finalTx.amount) } : w);
-    setData({ ...data, transactions: newTx, wallets: newW });
-    setIsTxModalOpen(false); setEditingTx(null); setDetailTx(null);
-  };
-
-  const handleDeleteTx = (id: string) => {
-     if(!confirm("Haqiqatan ham bu amalni o'chirmoqchimisiz?")) return;
-     const tx = data.transactions.find(t => t.id === id);
-     if(!tx) return;
-     const newW = data.wallets.map(w => w.id === tx.walletId ? { ...w, balance: w.balance + (tx.type === 'income' ? -tx.amount : tx.amount) } : w);
-     setData({ ...data, transactions: data.transactions.filter(t => t.id !== id), wallets: newW });
-     setContextMenu(null); setDetailTx(null);
-  };
-
-  const handleDeleteWallet = (id: string) => {
-      if(data.wallets.length <= 1) return;
-      if(!confirm("Hamyonni o'chirsangiz, barcha tarixiy ma'lumotlar yo'qoladi. Rozimisiz?")) return;
-      setData({ ...data, wallets: data.wallets.filter(w => w.id !== id), transactions: data.transactions.filter(t => t.walletId !== id) });
-      setContextMenu(null);
-  };
-
-  const handleJumpToFilter = (filter: FilterState) => {
-    setStatsFilter(filter); setDetailTx(null); setActiveTab('stats');
-  };
-
-  // --- RENDER ---
-
-  // 1. Agar qulflangan bo'lsa, LockScreen ko'rsatamiz
-  if (isLocked && data.settings?.pinCode) {
-      return (
-          <LockScreen 
-              correctPin={data.settings.pinCode} 
-              useBiometrics={data.settings.useBiometrics} 
-              onUnlock={() => setIsLocked(false)} 
-          />
-      );
-  }
-
-  // 2. Asosiy Ilova
   return (
     <div className="flex flex-col h-screen w-full bg-[#0a0e17] font-['Plus_Jakarta_Sans'] select-none text-[#e0e0ff]" onClick={() => setContextMenu(null)}>
-      
-      {/* Content Area */}
-      <div className="flex-1 overflow-hidden relative">
-        <div className="h-full w-full">
-          {activeTab === 'home' && (
-              <HomePage 
-                  data={data} 
-                  onNavigate={(p) => { setHistoryStack(prev => [...prev, activeTab]); setActiveTab(p as any); }}
-                  onTransactionClick={setDetailTx}
-                  onContextMenu={(e, i, t) => setContextMenu({ x: e.clientX, y: e.clientY, item: i, type: t })}
-                  onAddWallet={() => { setEditingWallet(null); setIsWalletModalOpen(true); }}
-                  onRefresh={refreshData}
-              />
-          )}
-          {activeTab === 'stats' && (
-              <StatsPage data={data} initialFilter={statsFilter} onClearFilter={() => setStatsFilter(null)} onTxClick={setDetailTx} />
-          )}
-          {activeTab === 'ai' && (
-              <AIPage data={data} onAddTransaction={handleTransactionSave} />
-          )}
-          {activeTab === 'profile' && (
-              <ProfilePage data={data} onUpdateSettings={(s) => setData({...data, settings: s})} />
-          )}
-        </div>
-      </div>
-
-      {/* Navigation Bar */}
-      <div className="fixed bottom-0 left-0 right-0 z-50 bg-[#0a0e17]/90 backdrop-blur-xl pb-5 pt-3 border-t border-white/5">
-        <div className="flex justify-between items-center px-6">
-           <button onClick={() => setActiveTab('home')} className={`flex flex-col items-center ${activeTab === 'home' ? 'text-[#00d4ff]' : 'text-gray-600'}`}>
-               <Home size={24}/>
-           </button>
-           <button onClick={() => setActiveTab('stats')} className={`flex flex-col items-center ${activeTab === 'stats' ? 'text-[#00d4ff]' : 'text-gray-600'}`}>
-               <BarChart2 size={24}/>
-           </button>
-           <div className="relative -top-7">
-              <button onClick={() => { setEditingTx(null); setIsTxModalOpen(true); }} className="w-16 h-16 rounded-full bg-[#141e3c] border border-[#00d4ff]/40 text-[#00d4ff] flex items-center justify-center shadow-[0_0_25px_rgba(0,212,255,0.3)] active:scale-95 transition-transform">
-                <Plus size={32} strokeWidth={3} />
-              </button>
-           </div>
-           <button onClick={() => setActiveTab('profile')} className={`flex flex-col items-center ${activeTab === 'profile' ? 'text-[#00d4ff]' : 'text-gray-600'}`}>
-               <User size={24}/>
-           </button>
-           <button onClick={() => setActiveTab('ai')} className={`flex flex-col items-center ${activeTab === 'ai' ? 'text-[#00d4ff]' : 'text-gray-600'}`}>
-               <Sparkles size={24}/>
-           </button>
-        </div>
-      </div>
-
-      {/* Context Menu */}
-      {contextMenu && (
-          <div className="absolute bg-[#141e3c] border border-white/10 rounded-2xl p-2 w-44 shadow-2xl z-[150] animate-slideUp" style={{ top: contextMenu.y - 100, left: Math.min(contextMenu.x - 20, window.innerWidth - 180) }} onClick={e => e.stopPropagation()}>
-              <button onClick={() => { if(contextMenu.type === 'tx') { setEditingTx(contextMenu.item); setIsTxModalOpen(true); } if(contextMenu.type === 'wallet') { setEditingWallet(contextMenu.item); setIsWalletModalOpen(true); } setContextMenu(null); }} className="w-full text-left px-3 py-3 text-white text-sm font-bold hover:bg-white/5 rounded-xl">✏️ Tahrirlash</button>
-              <div className="h-[1px] bg-white/5 my-1"></div>
-              <button onClick={() => { if(contextMenu.type === 'tx') handleDeleteTx(contextMenu.item.id); else handleDeleteWallet(contextMenu.item.id); }} className="w-full text-left px-3 py-3 text-rose-500 text-sm font-bold hover:bg-rose-500/10 rounded-xl">🗑️ O'chirish</button>
-          </div>
-      )}
-
-      {/* Modals */}
+      <div className="flex-1 overflow-hidden relative"><div className="h-full w-full">
+          {activeTab === 'home' && <HomePage data={data} onNavigate={(p) => { setHistoryStack(prev => [...prev, activeTab]); setActiveTab(p as any); }} onTransactionClick={setDetailTx} onContextMenu={(e, i, t) => setContextMenu({ x: e.clientX, y: e.clientY, item: i, type: t })} onAddWallet={() => { setEditingWallet(null); setIsWalletModalOpen(true); }} onRefresh={refreshData}/>}
+          {activeTab === 'stats' && <StatsPage data={data} initialFilter={statsFilter} onClearFilter={() => setStatsFilter(null)} onTxClick={setDetailTx} />}
+          {activeTab === 'ai' && <AIPage data={data} onAddTransaction={handleTransactionSave} />}
+          {activeTab === 'profile' && <ProfilePage data={data} onUpdateSettings={(s) => setData({...data, settings: s})} />}
+      </div></div>
+      <div className="fixed bottom-0 left-0 right-0 z-50 bg-[#0a0e17]/90 backdrop-blur-xl pb-5 pt-3 border-t border-white/5"><div className="flex justify-between items-center px-6"><button onClick={() => setActiveTab('home')} className={`flex flex-col items-center ${activeTab === 'home' ? 'text-[#00d4ff]' : 'text-gray-600'}`}><Home size={24}/></button><button onClick={() => setActiveTab('stats')} className={`flex flex-col items-center ${activeTab === 'stats' ? 'text-[#00d4ff]' : 'text-gray-600'}`}><BarChart2 size={24}/></button><div className="relative -top-7"><button onClick={() => { setEditingTx(null); setIsTxModalOpen(true); }} className="w-16 h-16 rounded-full bg-[#141e3c] border border-[#00d4ff]/40 text-[#00d4ff] flex items-center justify-center shadow-[0_0_25px_rgba(0,212,255,0.3)] active:scale-95 transition-transform"><Plus size={32} strokeWidth={3} /></button></div><button onClick={() => setActiveTab('profile')} className={`flex flex-col items-center ${activeTab === 'profile' ? 'text-[#00d4ff]' : 'text-gray-600'}`}><User size={24}/></button><button onClick={() => setActiveTab('ai')} className={`flex flex-col items-center ${activeTab === 'ai' ? 'text-[#00d4ff]' : 'text-gray-600'}`}><Sparkles size={24}/></button></div></div>
       <WalletModal isOpen={isWalletModalOpen} onClose={() => { setIsWalletModalOpen(false); setEditingWallet(null); }} onSave={handleWalletSave} initialData={editingWallet} />
-      
-      <TransactionModal 
-          isOpen={isTxModalOpen} 
-          onClose={() => setIsTxModalOpen(false)} 
-          onSave={handleTransactionSave} 
-          categories={data.categories} 
-          wallets={data.wallets} 
-          allTransactions={data.transactions}
-          initialData={editingTx} 
-          onAddCategory={(c) => setData({...data, categories: [...data.categories, c]})} 
-          onUpdateCategories={(u) => setData({...data, categories: u})}
-          settings={data.settings}
-      />
-      
-      <TransactionDetailModal 
-          isOpen={!!detailTx} 
-          onClose={() => setDetailTx(null)} 
-          transaction={detailTx} 
-          category={data.categories.find(c => c.id === detailTx?.categoryId)} 
-          wallet={data.wallets.find(w => w.id === detailTx?.walletId)} 
-          onEdit={(tx) => { setDetailTx(null); setEditingTx(tx); setIsTxModalOpen(true); }} 
-          onDelete={handleDeleteTx} 
-          onFilter={handleJumpToFilter} 
-      />
+      <TransactionModal isOpen={isTxModalOpen} onClose={() => setIsTxModalOpen(false)} onSave={handleTransactionSave} categories={data.categories} wallets={data.wallets} allTransactions={data.transactions} initialData={editingTx} onAddCategory={(c) => setData({...data, categories: [...data.categories, c]})} onUpdateCategories={(u) => setData({...data, categories: u})} settings={data.settings}/>
+      <TransactionDetailModal isOpen={!!detailTx} onClose={() => setDetailTx(null)} transaction={detailTx} category={data.categories.find(c => c.id === detailTx?.categoryId)} wallet={data.wallets.find(w => w.id === detailTx?.walletId)} onEdit={(tx) => { setDetailTx(null); setEditingTx(tx); setIsTxModalOpen(true); }} onDelete={handleDeleteTx} onFilter={handleJumpToFilter} />
+      {contextMenu && (<div className="absolute bg-[#141e3c] border border-white/10 rounded-2xl p-2 w-44 shadow-2xl z-[150] animate-slideUp" style={{ top: contextMenu.y - 100, left: Math.min(contextMenu.x - 20, window.innerWidth - 180) }} onClick={e => e.stopPropagation()}><button onClick={() => { if(contextMenu.type === 'tx') { setEditingTx(contextMenu.item); setIsTxModalOpen(true); } if(contextMenu.type === 'wallet') { setEditingWallet(contextMenu.item); setIsWalletModalOpen(true); } setContextMenu(null); }} className="w-full text-left px-3 py-3 text-white text-sm font-bold hover:bg-white/5 rounded-xl">✏️ Tahrirlash</button><div className="h-[1px] bg-white/5 my-1"></div><button onClick={() => { if(contextMenu.type === 'tx') handleDeleteTx(contextMenu.item.id); else handleDeleteWallet(contextMenu.item.id); }} className="w-full text-left px-3 py-3 text-rose-500 text-sm font-bold hover:bg-rose-500/10 rounded-xl">🗑️ O'chirish</button></div>)}
     </div>
   );
 }
