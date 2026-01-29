@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { App as CapacitorApp } from '@capacitor/app';
 import { 
   Home, BarChart2, Plus, Sparkles, User, Lock, 
-  Shield, Fingerprint, Key, Camera, Server, Save, CheckCircle 
+  Fingerprint, Camera, Server, Save, CheckCircle 
 } from 'lucide-react';
 import { loadData, saveData } from './storage';
 import { AppData, Transaction, Wallet, FilterState } from './types';
@@ -14,24 +14,27 @@ import TransactionDetailModal from './components/TransactionDetailModal';
 import StatsPage from './components/StatsPage';
 import AIPage from './components/AIPage';
 
-// --- PROFIL SAHIFASI ---
+// --- 1. PROFIL SAHIFASI KOMPONENTI ---
 const ProfilePage = ({ data, onUpdateSettings }: { data: AppData, onUpdateSettings: (s: any) => void }) => {
-    const [name, setName] = useState(data.settings.userName || '');
-    const [pin, setPin] = useState(data.settings.pinCode || '');
-    const [biometrics, setBiometrics] = useState(data.settings.useBiometrics || false);
+    // Null check: Agar settings yo'q bo'lsa, bo'sh obyekt olamiz
+    const settings = data.settings || {};
+
+    const [name, setName] = useState(settings.userName || '');
+    const [pin, setPin] = useState(settings.pinCode || '');
+    const [biometrics, setBiometrics] = useState(settings.useBiometrics || false);
     
-    // AI STATE
-    const [geminiKey, setGeminiKey] = useState(data.settings.geminiKey || '');
-    const [groqKey, setGroqKey] = useState(data.settings.groqKey || '');
-    const [preferred, setPreferred] = useState(data.settings.preferredProvider || 'gemini');
-    const [geminiModel, setGeminiModel] = useState(data.settings.geminiModel || 'gemini-2.5-flash');
-    const [groqModel, setGroqModel] = useState(data.settings.groqModel || 'llama-3.3-70b-versatile');
+    // AI State
+    const [geminiKey, setGeminiKey] = useState(settings.geminiKey || '');
+    const [groqKey, setGroqKey] = useState(settings.groqKey || '');
+    const [preferred, setPreferred] = useState(settings.preferredProvider || 'gemini');
+    const [geminiModel, setGeminiModel] = useState(settings.geminiModel || 'gemini-2.5-flash');
+    const [groqModel, setGroqModel] = useState(settings.groqModel || 'llama-3.3-70b-versatile');
     
     const [isSaved, setIsSaved] = useState(false);
 
     const handleSave = () => {
         onUpdateSettings({
-            ...data.settings,
+            ...settings,
             userName: name,
             pinCode: pin || null,
             useBiometrics: biometrics,
@@ -47,17 +50,20 @@ const ProfilePage = ({ data, onUpdateSettings }: { data: AppData, onUpdateSettin
 
     return (
         <div className="h-full flex flex-col bg-[#0a0e17] animate-slideUp">
+            {/* Header */}
             <div className="p-6 pt-10 pb-4 shrink-0 bg-[#0a0e17] z-10 sticky top-0 border-b border-white/5">
                  <h2 className="text-2xl font-bold text-white flex items-center gap-2">
                     <User className="text-[#00d4ff]"/> Profil Sozlamalari
                  </h2>
             </div>
             
-            <div className="flex-1 overflow-y-auto px-6 pb-32 scroll-area">
-                {/* 1. AVATAR */}
+            {/* Scrollable Content */}
+            <div className="flex-1 overflow-y-auto px-6 pb-32 scrollbar-hide">
+                
+                {/* Avatar & Name */}
                 <div className="flex flex-col items-center my-8">
                     <div className="relative mb-4">
-                        <img src={data.profile.avatar} alt="Avatar" className="w-24 h-24 rounded-full border-4 border-[#141e3c] shadow-2xl object-cover"/>
+                        <img src={data.profile?.avatar || 'https://cdn-icons-png.flaticon.com/512/149/149071.png'} alt="Avatar" className="w-24 h-24 rounded-full border-4 border-[#141e3c] shadow-2xl object-cover"/>
                         <button className="absolute bottom-0 right-0 p-2 bg-[#00d4ff] rounded-full text-[#0a0e17] shadow-lg">
                             <Camera size={16}/>
                         </button>
@@ -70,12 +76,12 @@ const ProfilePage = ({ data, onUpdateSettings }: { data: AppData, onUpdateSettin
                     />
                 </div>
 
-                {/* 2. AI & API SOZLAMALARI */}
+                {/* AI Settings */}
                 <div className="mb-8">
                     <h3 className="text-gray-500 text-[10px] font-bold uppercase mb-4 ml-1 tracking-widest text-center">Sun'iy Intellekt</h3>
                     <div className="bg-[#141e3c] p-5 rounded-3xl border border-white/5 space-y-6">
                         
-                        {/* Gemini Section */}
+                        {/* Gemini */}
                         <div className="space-y-3">
                             <div className="flex justify-between items-center">
                                 <p className="text-[#00d4ff] text-xs font-bold">Google Gemini</p>
@@ -88,7 +94,7 @@ const ProfilePage = ({ data, onUpdateSettings }: { data: AppData, onUpdateSettin
                             <input type="text" placeholder="Gemini API Key" value={geminiKey} onChange={e => setGeminiKey(e.target.value)} className="w-full bg-[#0a0e17] text-white p-3 rounded-xl border border-white/10 text-xs font-mono outline-none"/>
                         </div>
 
-                        {/* Groq Section */}
+                        {/* Groq */}
                         <div className="space-y-3">
                              <div className="flex justify-between items-center">
                                 <p className="text-[#f55036] text-xs font-bold">Groq (Compound)</p>
@@ -111,7 +117,7 @@ const ProfilePage = ({ data, onUpdateSettings }: { data: AppData, onUpdateSettin
                     </div>
                 </div>
 
-                {/* 3. XAVFSIZLIK */}
+                {/* Security */}
                 <div className="mb-10">
                     <h3 className="text-gray-500 text-[10px] font-bold uppercase mb-4 ml-1 tracking-widest text-center">Xavfsizlik</h3>
                     <div className="bg-[#141e3c] rounded-3xl overflow-hidden border border-white/5">
@@ -141,7 +147,7 @@ const ProfilePage = ({ data, onUpdateSettings }: { data: AppData, onUpdateSettin
     );
 };
 
-// --- LOCK SCREEN ---
+// --- 2. LOCK SCREEN KOMPONENTI ---
 const LockScreen = ({ correctPin, onUnlock }: { correctPin: string, onUnlock: () => void }) => {
     const [input, setInput] = useState('');
     const [error, setError] = useState(false);
@@ -153,23 +159,21 @@ const LockScreen = ({ correctPin, onUnlock }: { correctPin: string, onUnlock: ()
         }
     };
     return (
-        <div className="fixed inset-0 z-[300] bg-[#05070a] flex flex-col items-center justify-center animate-slideUp">
+        <div className="fixed inset-0 z-[300] bg-[#05070a] flex flex-col items-center justify-center">
             <div className="p-4 bg-[#141e3c] rounded-full mb-8"><Lock size={32} className="text-[#00d4ff]"/></div>
-            <h2 className="text-white font-bold text-xl mb-8">PIN kiriting</h2>
-            <div className="flex gap-4 mb-10">{[...Array(correctPin.length)].map((_, i) => (<div key={i} className={`w-4 h-4 rounded-full border border-[#00d4ff] ${i < input.length ? 'bg-[#00d4ff]' : ''} ${error ? 'animate-bounce bg-red-500 border-red-500' : ''}`}></div>))}</div>
-            <div className="grid grid-cols-3 gap-6">{[1,2,3,4,5,6,7,8,9].map(n => (<button key={n} onClick={() => handleInput(n.toString())} className="w-16 h-16 rounded-full bg-[#141e3c] text-white font-bold text-xl active:scale-90">{n}</button>))}<div/><button onClick={() => handleInput('0')} className="w-16 h-16 rounded-full bg-[#141e3c] text-white font-bold text-xl active:scale-90">0</button><button onClick={() => setInput(input.slice(0,-1))} className="w-16 h-16 rounded-full text-gray-500 flex items-center justify-center">⬅️</button></div>
+            <div className="flex gap-4 mb-10">{[...Array(correctPin.length)].map((_, i) => (<div key={i} className={`w-4 h-4 rounded-full border border-[#00d4ff] ${i < input.length ? 'bg-[#00d4ff]' : ''} ${error ? 'animate-bounce bg-red-500' : ''}`}></div>))}</div>
+            <div className="grid grid-cols-3 gap-6">{[1,2,3,4,5,6,7,8,9].map(n => (<button key={n} onClick={() => handleInput(n.toString())} className="w-16 h-16 rounded-full bg-[#141e3c] text-white font-bold text-xl">{n}</button>))}<div/><button onClick={() => handleInput('0')} className="w-16 h-16 rounded-full bg-[#141e3c] text-white font-bold text-xl">0</button><button onClick={() => setInput(input.slice(0,-1))} className="w-16 h-16 rounded-full text-gray-500">⬅️</button></div>
         </div>
     );
 };
 
-// --- MAIN APP COMPONENT ---
+// --- 3. ASOSIY APP KOMPONENTI ---
 type TabType = 'home' | 'stats' | 'ai' | 'profile';
 
 function App() {
-  const [data, setData] = useState<AppData>(loadData());
+  const [data, setData] = useState<AppData | null>(null);
   const [activeTab, setActiveTab] = useState<TabType>('home');
-  const [historyStack, setHistoryStack] = useState<TabType[]>([]);
-  const [isLocked, setIsLocked] = useState(!!(data.settings?.pinCode && data.settings.pinCode.length === 4));
+  const [isLocked, setIsLocked] = useState(false);
 
   // Modal states
   const [isTxModalOpen, setIsTxModalOpen] = useState(false);
@@ -180,25 +184,41 @@ function App() {
   const [contextMenu, setContextMenu] = useState<{ x: number, y: number, item: any, type: 'wallet' | 'tx' } | null>(null);
   const [statsFilter, setStatsFilter] = useState<FilterState | null>(null);
 
-  useEffect(() => { saveData(data); }, [data]);
+  // Initial Load
+  useEffect(() => {
+    const loaded = loadData();
+    setData(loaded);
+    if (loaded.settings?.pinCode) {
+        setIsLocked(true);
+    }
+  }, []);
 
+  // Auto Save
+  useEffect(() => {
+    if (data) saveData(data);
+  }, [data]);
+
+  // Back Button Logic
   useEffect(() => {
     CapacitorApp.addListener('backButton', () => {
       if (isLocked) return;
       if (isTxModalOpen || isWalletModalOpen || detailTx || contextMenu) {
          setIsTxModalOpen(false); setIsWalletModalOpen(false); setDetailTx(null); setContextMenu(null); return;
       }
-      if (historyStack.length > 0) {
-         const prev = historyStack[historyStack.length - 1];
-         setHistoryStack(p => p.slice(0, -1)); setActiveTab(prev); return;
-      }
       if (activeTab !== 'home') { setActiveTab('home'); return; }
       CapacitorApp.exitApp();
     });
-  }, [isTxModalOpen, isWalletModalOpen, detailTx, contextMenu, historyStack, activeTab, isLocked]);
+  }, [isTxModalOpen, isWalletModalOpen, detailTx, contextMenu, activeTab, isLocked]);
 
+  // Loading Screen (Qora ekran bo'lmasligi uchun)
+  if (!data) return <div className="h-screen bg-[#0a0e17] flex items-center justify-center text-white font-bold">Yuklanmoqda...</div>;
+  
+  // Lock Screen
+  if (isLocked && data.settings?.pinCode) return <LockScreen correctPin={data.settings.pinCode} onUnlock={() => setIsLocked(false)} />;
+
+  // Handlers
   const handleWalletSave = (wallet: Wallet) => {
-    if (editingWallet) setData({ ...data, wallets: data.wallets.map(w => w.id === wallet.id ? wallet : w) });
+    if (editingWallet) setData({ ...data, wallets: data.wallets.map(x => x.id === w.id ? wallet : x) });
     else setData({ ...data, wallets: [...data.wallets, wallet] });
     setIsWalletModalOpen(false); setEditingWallet(null);
   };
@@ -217,60 +237,58 @@ function App() {
     newTx.push(finalTx);
     newW = newW.map(w => w.id === finalTx.walletId ? { ...w, balance: w.balance + (finalTx.type === 'income' ? finalTx.amount : -finalTx.amount) } : w);
     setData({ ...data, transactions: newTx, wallets: newW });
-    setIsTxModalOpen(false); setEditingTx(null); setDetailTx(null);
+    setIsTxModalOpen(false); setEditingTx(null);
   };
 
-  if (isLocked && data.settings?.pinCode) return <LockScreen correctPin={data.settings.pinCode} onUnlock={() => setIsLocked(false)} />;
-
   return (
-    <div className="flex flex-col h-screen w-full bg-[#0a0e17] font-['Plus_Jakarta_Sans'] select-none text-[#e0e0ff]" onClick={() => setContextMenu(null)}>
-      <div className="flex-1 overflow-hidden relative">
-        <div className="h-full w-full">
-          {activeTab === 'home' && <HomePage data={data} onNavigate={(p) => { setHistoryStack(prev => [...prev, activeTab]); setActiveTab(p as any); }} onTransactionClick={setDetailTx} onContextMenu={(e, i, t) => setContextMenu({ x: e.clientX, y: e.clientY, item: i, type: t })} onAddWallet={() => { setEditingWallet(null); setIsWalletModalOpen(true); }} onRefresh={() => setData(loadData())}/>}
+    <div className="flex flex-col h-screen w-full bg-[#0a0e17] text-[#e0e0ff]" onClick={() => setContextMenu(null)}>
+      
+      {/* Content */}
+      <div className="flex-1 overflow-hidden">
+          {activeTab === 'home' && <HomePage data={data} onNavigate={(p) => setActiveTab(p as any)} onTransactionClick={setDetailTx} onContextMenu={(e, i, t) => setContextMenu({ x: e.clientX, y: e.clientY, item: i, type: t })} onAddWallet={() => { setEditingWallet(null); setIsWalletModalOpen(true); }} onRefresh={() => setData(loadData())}/>}
           {activeTab === 'stats' && <StatsPage data={data} initialFilter={statsFilter} onClearFilter={() => setStatsFilter(null)} onTxClick={setDetailTx} />}
           {activeTab === 'ai' && <AIPage data={data} onAddTransaction={handleTransactionSave} />}
           {activeTab === 'profile' && <ProfilePage data={data} onUpdateSettings={(s) => setData({...data, settings: s})} />}
-        </div>
       </div>
 
-      {/* NAV BAR */}
-      <div className="fixed bottom-0 left-0 right-0 z-50 bg-[#0a0e17]/90 backdrop-blur-xl pb-6 pt-3 border-t border-white/5 shadow-[0_-10px_40px_rgba(0,0,0,0.5)]">
+      {/* Navigation */}
+      <div className="fixed bottom-0 left-0 right-0 z-50 bg-[#0a0e17]/90 backdrop-blur-xl pb-6 pt-3 border-t border-white/5">
         <div className="flex justify-between items-center px-8">
-           <button onClick={() => setActiveTab('home')} className={`transition-all ${activeTab === 'home' ? 'text-[#00d4ff] scale-110' : 'text-gray-600'}`}><Home size={24}/></button>
-           <button onClick={() => setActiveTab('stats')} className={`transition-all ${activeTab === 'stats' ? 'text-[#00d4ff] scale-110' : 'text-gray-600'}`}><BarChart2 size={24}/></button>
+           <button onClick={() => setActiveTab('home')} className={activeTab === 'home' ? 'text-[#00d4ff]' : 'text-gray-600'}><Home/></button>
+           <button onClick={() => setActiveTab('stats')} className={activeTab === 'stats' ? 'text-[#00d4ff]' : 'text-gray-600'}><BarChart2/></button>
            <div className="relative -top-8">
-              <button onClick={() => { setEditingTx(null); setIsTxModalOpen(true); }} className="w-16 h-16 rounded-full bg-gradient-to-tr from-[#141e3c] to-[#1e2a4a] border border-[#00d4ff]/40 text-[#00d4ff] flex items-center justify-center shadow-[0_0_30px_rgba(0,212,255,0.3)] active:scale-90 transition-all">
-                <Plus size={32} strokeWidth={2.5} />
-              </button>
+              <button onClick={() => { setEditingTx(null); setIsTxModalOpen(true); }} className="w-16 h-16 rounded-full bg-[#141e3c] border border-[#00d4ff]/40 text-[#00d4ff] flex items-center justify-center shadow-lg active:scale-90"><Plus size={32}/></button>
            </div>
-           <button onClick={() => setActiveTab('profile')} className={`transition-all ${activeTab === 'profile' ? 'text-[#00d4ff] scale-110' : 'text-gray-600'}`}><User size={24}/></button>
-           <button onClick={() => setActiveTab('ai')} className={`transition-all ${activeTab === 'ai' ? 'text-[#00d4ff] scale-110' : 'text-gray-600'}`}><Sparkles size={24}/></button>
+           <button onClick={() => setActiveTab('profile')} className={activeTab === 'profile' ? 'text-[#00d4ff]' : 'text-gray-600'}><User/></button>
+           <button onClick={() => setActiveTab('ai')} className={activeTab === 'ai' ? 'text-[#00d4ff]' : 'text-gray-600'}><Sparkles/></button>
         </div>
       </div>
 
-      {/* MODALS */}
+      {/* Context Menu */}
       {contextMenu && (
-          <div className="absolute bg-[#141e3c] border border-white/10 rounded-2xl p-2 w-44 shadow-2xl z-[150] animate-slideUp" style={{ top: contextMenu.y - 120, left: Math.min(contextMenu.x - 20, window.innerWidth - 180) }} onClick={e => e.stopPropagation()}>
-              <button onClick={() => { if(contextMenu.type === 'tx') { setEditingTx(contextMenu.item); setIsTxModalOpen(true); } else { setEditingWallet(contextMenu.item); setIsWalletModalOpen(true); } setContextMenu(null); }} className="w-full text-left px-3 py-3 text-white text-sm font-bold hover:bg-white/5 rounded-xl">✏️ Tahrirlash</button>
+          <div className="absolute bg-[#141e3c] border border-white/10 rounded-2xl p-2 w-44 z-[150]" style={{ top: contextMenu.y - 120, left: Math.min(contextMenu.x, window.innerWidth - 180) }} onClick={e => e.stopPropagation()}>
+              <button onClick={() => { if(contextMenu.type === 'tx') { setEditingTx(contextMenu.item); setIsTxModalOpen(true); } else { setEditingWallet(contextMenu.item); setIsWalletModalOpen(true); } setContextMenu(null); }} className="w-full text-left p-3 text-sm font-bold">Tahrirlash</button>
               <div className="h-[1px] bg-white/5 my-1"></div>
               <button onClick={() => { 
-                if(!confirm("Haqiqatan ham o'chirilsinmi?")) return;
-                if(contextMenu.type === 'tx') {
-                    const tx = contextMenu.item;
-                    const newW = data.wallets.map(w => w.id === tx.walletId ? { ...w, balance: w.balance + (tx.type === 'income' ? -tx.amount : tx.amount) } : w);
-                    setData({ ...data, transactions: data.transactions.filter(t => t.id !== tx.id), wallets: newW });
-                } else {
-                    if(data.wallets.length > 1) setData({ ...data, wallets: data.wallets.filter(w => w.id !== contextMenu.item.id) });
-                }
-                setContextMenu(null); 
-              }} className="w-full text-left px-3 py-3 text-rose-500 text-sm font-bold hover:bg-rose-500/10 rounded-xl">🗑️ O'chirish</button>
+                  if(!confirm("Ishonchingiz komilmi?")) return;
+                  if(contextMenu.type === 'tx') {
+                      const tx = contextMenu.item;
+                      const newW = data.wallets.map(w => w.id === tx.walletId ? { ...w, balance: w.balance + (tx.type === 'income' ? -tx.amount : tx.amount) } : w);
+                      setData({ ...data, transactions: data.transactions.filter(t => t.id !== tx.id), wallets: newW });
+                  } else {
+                      if(data.wallets.length > 1) setData({ ...data, wallets: data.wallets.filter(w => w.id !== contextMenu.item.id) });
+                  }
+                  setContextMenu(null);
+              }} className="w-full text-left p-3 text-rose-500 text-sm font-bold">O'chirish</button>
           </div>
       )}
 
+      {/* Modals */}
       <WalletModal isOpen={isWalletModalOpen} onClose={() => setIsWalletModalOpen(false)} onSave={handleWalletSave} initialData={editingWallet} />
       <TransactionModal isOpen={isTxModalOpen} onClose={() => setIsTxModalOpen(false)} onSave={handleTransactionSave} categories={data.categories} wallets={data.wallets} allTransactions={data.transactions} initialData={editingTx} onAddCategory={(c) => setData({...data, categories: [...data.categories, c]})} onUpdateCategories={(u) => setData({...data, categories: u})} settings={data.settings}/>
-      <TransactionDetailModal isOpen={!!detailTx} onClose={() => setDetailTx(null)} transaction={detailTx} category={data.categories.find(c => c.id === detailTx?.categoryId)} wallet={data.wallets.find(w => w.id === detailTx?.walletId)} onEdit={(tx) => { setDetailTx(null); setEditingTx(tx); setIsTxModalOpen(true); }} onDelete={() => {}} onFilter={handleJumpToFilter} />
+      <TransactionDetailModal isOpen={!!detailTx} onClose={() => setDetailTx(null)} transaction={detailTx} category={data.categories.find(c => c.id === detailTx?.categoryId)} wallet={data.wallets.find(w => w.id === detailTx?.walletId)} onEdit={(tx) => { setDetailTx(null); setEditingTx(tx); setIsTxModalOpen(true); }} onDelete={() => {}} onFilter={(f) => { setStatsFilter(f); setDetailTx(null); setActiveTab('stats'); }} />
     </div>
   );
 }
+
 export default App;
