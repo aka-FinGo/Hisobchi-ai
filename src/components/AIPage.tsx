@@ -67,7 +67,7 @@ export default function AIPage({ data, onAddTransaction }: Props) {
       return Array.from(new Set(hints)).slice(0, 5).join('\n');
   };
 
-  // --- 3. SYSTEM PROMPT (AI miyasi) ---
+  // --- 3. SYSTEM PROMPT (AI miyasi - Example bilan) ---
   const getSystemContext = (userQuery: string) => {
     const today = new Date();
     const currentMonth = today.toISOString().slice(0, 7);
@@ -75,67 +75,64 @@ export default function AIPage({ data, onAddTransaction }: Props) {
     // Moliya holati
     const income = data.transactions.filter(t => t.type === 'income' && t.date.startsWith(currentMonth)).reduce((s, t) => s + t.amount, 0);
     const expense = data.transactions.filter(t => t.type === 'expense' && t.date.startsWith(currentMonth)).reduce((s, t) => s + t.amount, 0);
+    const balance = income - expense;
 
     const catList = data.categories.map(c => c.name).join(', ');
     const walletList = data.wallets.map(w => w.name).join(', ');
-    
-    // Aqlli maslahatlarni chaqiramiz
     const smartHints = findSmartPatterns(userQuery);
 
     return `
-      Sen professional hisobchisan va moliyaviy tahlilchisan. 
-      Bugungi sana: ${today.toISOString().split('T')[0]}.
+      Sen professional hisobchisan. Bugun: ${today.toISOString().split('T')[0]}.
       
-      FOYDALANUVCHI HOLATI:
-      - Bu oy jami kirim: ${income.toLocaleString()}
-      - Bu oy jami chiqim: ${expense.toLocaleString()}
-      - Mavjud Hamyonlar: ${walletList}
-      - Mavjud Kategoriyalar: ${catList}
+      MOLIYAVIY HOLAT:
+      - Kirim: ${income} | Chiqim: ${expense} | Qoldiq: ${balance}
+      - Kategoriyalar: ${catList}
+      - Hamyonlar: ${walletList}
       
-      FOYDALANUVCHI SOZLAMASI (Custom Prompt):
-      ${data.settings.customPrompt || "Yo'q"}
+      ODATLAR: ${smartHints}
+      Prompt: ${data.settings.customPrompt || ""}
 
-      TARIXDAN O'RGANILGAN ODATLAR:
-      ${smartHints || "Hozircha o'xshashlik topilmadi, umumiy mantiqqa tayan."}
+      QAT'IY QOIDALAR VA NAMUNALAR (SHART!):
 
-      QAT'IY QOIDALAR (Step-by-Step):
-      
-      1. UZUN RO'YXATLAR VA KO'P AMALLAR:
-         - Foydalanuvchi bir vaqtda ko'p narsa yozishi mumkin (masalan, nusxalab tashlangan ro'yxat).
-         - Har bir qatorni yoki amalni alohida tahlil qilib, bitta katta JSON ARRAY qaytar.
-      
-      2. TYPE (Kirim/Chiqim) ANIQLASH MANTIQI:
-         - Agar gapda "tushdi", "oylik", "bonus", "qarz oldim", "keldi", "berishdi", "foyda" so'zlari bo'lsa -> "type": "income"
-         - Agar gapda "ketdi", "sotib oldim", "yubordim", "to'ladim", "xarajat", "ishlatdim", "berdim" so'zlari bo'lsa -> "type": "expense"
-      
-      3. JAVOB FORMATI (Faqat JSON Array bo'lsin):
+      1. AGAR FOYDALANUVCHI AMAL QO'SHSA (Kirim yoki Chiqim):
+         Javobni DOIM JSON Array formatida qaytar.
+         
+         NAMUNA (EXAMPLE):
+         User: "Tushlik 50k, Oylik 5mln tushdi"
+         Assistant:
          [
            {
-             "action": "add", 
-             "amount": 5000, 
-             "type": "expense", 
-             "category": "Oziq-ovqat", 
-             "wallet": "Naqd", 
-             "date": "2024-01-01", 
-             "note": "Non"
+             "action": "add",
+             "amount": 50000,
+             "type": "expense",
+             "category": "Oziq-ovqat",
+             "wallet": "Naqd",
+             "date": "2026-01-29",
+             "note": "Tushlik"
            },
            {
-             "action": "add", 
-             "amount": 2000000, 
-             "type": "income", 
-             "category": "Maosh", 
-             "wallet": "Plastik", 
-             "date": "2024-01-01", 
+             "action": "add",
+             "amount": 5000000,
+             "type": "income",
+             "category": "Maosh",
+             "wallet": "Plastik",
+             "date": "2026-01-29",
              "note": "Oylik"
            }
          ]
 
-      4. QIDIRUV UCHUN: 
-         [{"action": "search", "query": "..."}]
+      2. AGAR FOYDALANUVCHI QIDIRSA:
+         NAMUNA: [{"action": "search", "query": "taksi"}]
 
-      5. AGAR SAVOL BO'LSA (Masalan: "Ahvolim qanday?", "Nima qilay?"):
-         JSON ishlatma. Shunchaki chiroyli, tushunarli o'zbek tilida maslahat ber.
-         Javobingda hech qachon "JSON:" yoki "```json" so'zlarini ishlatma.
+      3. AGAR SAVOL-JAVOB BO'LSA (Tahlil):
+         JSON ishlatma! Shunchaki matn yoz.
+         Misol: "Sizning ahvolingiz yaxshi, lekin kofega ko'p sarflayapsiz."
+
+      4. MANTIQ:
+         - Kirim so'zlari: "tushdi, oldim (pul), oylik, bonus" -> "type": "income"
+         - Chiqim so'zlari: "ketdi, oldim (narsa), to'ladim, ishlatdim" -> "type": "expense"
+
+      Javobingda faqat toza JSON yoki toza matn bo'lsin. Markdown (qqqjson) ishlatma.
     `;
   };
 
