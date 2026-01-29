@@ -36,38 +36,41 @@ export default function StatsPage({ data, initialFilter, onClearFilter, onTxClic
   };
   // END: SWIPE LOGIKASI
 
-  // START: EXCELGA EKSPORT (XLSX kutubxonasi yordamida)
+ /**
+ * START: STATSPAGE.TSX (Eksport qismi)
+ * Excel faylini to'g'ri generatsiya qilish va saqlash.
+ */
+
   const handleExportExcel = async () => {
     try {
       const exportData = data.transactions.map(t => ({
         Sana: t.date,
         Summa: t.amount,
-        Tur: t.type === 'income' ? 'Kirim' : 'Chiqim',
-        Hamyon: data.wallets.find(w => w.id === t.walletId)?.name || '-',
-        Kategoriya: data.categories.find(c => c.id === t.categoryId)?.name || '-',
+        Kategoriya: data.categories.find(c => c.id === t.categoryId)?.name || 'Boshqa',
         Izoh: t.note || ''
       }));
 
       const ws = XLSX.utils.json_to_sheet(exportData);
       const wb = XLSX.utils.book_new();
       XLSX.utils.book_append_sheet(wb, ws, "Hisobot");
-      const excelBuffer = XLSX.write(wb, { bookType: 'xlsx', type: 'base64' });
+      
+      // XLSX'ni base64 ko'rinishida olish
+      const excelBase64 = XLSX.write(wb, { bookType: 'xlsx', type: 'base64' });
 
-      const fileName = `Hisobchi_AI_Export_${new Date().getTime()}.xlsx`;
+      const fileName = `Hisobot_${Date.now()}.xlsx`;
+      
       await Filesystem.writeFile({
         path: fileName,
-        data: excelBuffer,
+        data: excelBase64,
         directory: Directory.Documents,
-        encoding: Encoding.UTF8,
+        // ENCODING Olib tashlandi, chunki base64 avtomatik taniladi
       });
-      alert(`Fayl saqlandi: Documents/${fileName}`);
+
+      alert("Excel fayli 'Documents' papkasiga saqlandi!");
     } catch (e) {
-      console.error("Eksportda xato:", e);
-      alert("Eksport qilish uchun ruxsatlarni tekshiring.");
+      alert("Xato: " + JSON.stringify(e));
     }
   };
-  // END: EXCELGA EKSPORT
-
   // START: FILTRLASH MANTIQI
   const filteredTxs = useMemo(() => {
     return data.transactions.filter(t => {
