@@ -74,31 +74,36 @@ export default function AIPage({ data, onAddTransaction }: Props) {
     `;
   };
 
-  // --- FALLBACK LOGIKASI ---
+  // --- MUKAMMAL API CHAQIRUV ---
   const callAIProvider = async (provider: string, key: string, prompt: string, userMsg: string) => {
       if (provider === 'gemini') {
-          // Gemini 3 Flash Preview va x-goog-api-key header uslubi
-          const url = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-exp:generateContent'; // Hozirgi barqaror preview
-          const res = await fetch(`${url}?key=${key}`, { // URL orqali yuborish ishonchliroq
+          const modelId = data.settings.geminiModel || 'gemini-2.5-flash';
+          const url = `https://generativelanguage.googleapis.com/v1beta/models/${modelId}:generateContent`;
+          
+          const res = await fetch(url, {
               method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
+              headers: { 
+                  'Content-Type': 'application/json',
+                  'x-goog-api-key': key // Siz bergan namunadagi header uslubi
+              },
               body: JSON.stringify({
                   contents: [{
-                      parts: [{ text: prompt + `\n\nFoydalanuvchi so'rovi: ${userMsg}` }]
+                      parts: [{ text: `${prompt}\n\nFoydalanuvchi: ${userMsg}` }]
                   }],
                   generationConfig: {
                     temperature: 1,
                     maxOutputTokens: 1024,
+                    topP: 1
                   }
               })
           });
-          if (!res.ok) throw new Error("Gemini API xatosi");
+          if (!res.ok) throw new Error("Gemini API Error");
           const json = await res.json();
           return json.candidates?.[0]?.content?.parts?.[0]?.text;
       } 
       
       else if (provider === 'groq') {
-          // Siz bergan Groq Compound modeli va Tools sozlamalari
+          const modelId = data.settings.groqModel || 'llama-3.3-70b-versatile';
           const res = await fetch('https://api.groq.com/openai/v1/chat/completions', {
               method: 'POST',
               headers: { 
@@ -106,27 +111,26 @@ export default function AIPage({ data, onAddTransaction }: Props) {
                   'Content-Type': 'application/json' 
               },
               body: JSON.stringify({
-                  model: "llama-3.3-70b-versatile", // Compound model nomi provayderga qarab o'zgarishi mumkin
+                  model: modelId,
                   messages: [
                       { role: "system", content: prompt },
                       { role: "user", content: userMsg }
                   ],
                   temperature: 1,
                   max_completion_tokens: 1024,
-                  top_p: 1,
-                  // Compound model xususiyatlari (agar API qo'llab quvvatlasa)
+                  // Siz bergan Compound Tool sozlamalari
                   compound_custom: {
                       tools: {
-                          enabled_tools: ["web_search", "code_interpreter", "visit_website"]
+                          enabled_tools: ["web_search", "code_interpreter"]
                       }
                   }
               })
           });
-          if (!res.ok) throw new Error("Groq API xatosi");
+          if (!res.ok) throw new Error("Groq API Error");
           const json = await res.json();
           return json.choices?.[0]?.message?.content;
       }
-      throw new Error("Noma'lum provayder");
+      throw new Error("Provider not found");
   };
   const handleSend = async () => {
     if (!input.trim()) return;
