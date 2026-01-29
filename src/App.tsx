@@ -315,6 +315,19 @@ function App() {
 
       <WalletModal isOpen={isWalletModalOpen} onClose={() => { setIsWalletModalOpen(false); setEditingWallet(null); }} onSave={handleWalletSave} initialData={editingWallet} />
       
+      <TransactionModal 
+          isOpen={isTxModalOpen} 
+          onClose={() => setIsTxModalOpen(false)} 
+          onSave={handleTransactionSave} 
+          categories={data.categories} 
+          wallets={data.wallets} 
+          allTransactions={data.transactions}
+          initialData={editingTx} 
+          onAddCategory={(c) => setData({...data, categories: [...data.categories, c]})} 
+          onUpdateCategories={(u) => setData({...data, categories: u})}
+          settings={data.settings}
+      />
+      
       <TransactionDetailModal 
           isOpen={!!detailTx} 
           onClose={() => setDetailTx(null)} 
