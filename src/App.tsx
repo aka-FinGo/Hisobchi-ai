@@ -1,13 +1,15 @@
 /* --- START: ASOSIY ILOVA LOGIKASI (1-BO'LIM) --- */
 import { useState, useEffect } from 'react';
 import { NativeBiometric } from '@capgo/capacitor-native-biometric';
-import { Home, Sparkles, User, Fingerprint, Save, CheckCircle, Camera, Loader2 } from 'lucide-react';
+import { Home, BarChart2, Plus, Sparkles, User, Fingerprint, Save, CheckCircle, Loader2 } from 'lucide-react';
 import { loadData, saveData } from './storage';
 import { AppData, Transaction } from './types';
 
 // Sahifalar
 import HomePage from './components/HomePage';
 import AIPage from './components/AIPage';
+import StatsPage from './components/StatsPage';
+import TransactionModal from './components/TransactionModal';
 
 // MODELLAR RO'YXATI
 const GEMINI_MODELS = [
@@ -78,10 +80,11 @@ const ProfilePage = ({ data, onUpdateSettings }: { data: AppData, onUpdateSettin
 /* --- ASOSIY ILOVA KOMPONENTI (2-BO'LIM) --- */
 export default function App() {
   const [data, setData] = useState<AppData>(loadData());
-  const [activeTab, setActiveTab] = useState<'home' | 'ai' | 'profile'>('home');
+  const [activeTab, setActiveTab] = useState<'home' | 'stats' | 'ai' | 'profile'>('home');
+  const [isTxModalOpen, setIsTxModalOpen] = useState(false);
   const [isLocked, setIsLocked] = useState(data.settings.useBiometrics);
 
-  // START: Avto-saqlash
+  // START: Avto-saqlash (Har bir o'zgarishda)
   useEffect(() => { saveData(data); }, [data]);
 
   // START: Biometrika (Native)
@@ -93,6 +96,17 @@ export default function App() {
     }
   }, [isLocked]);
 
+  // START: Tranzaksiyalarni boshqarish funksiyalari
+  const handleAddTx = (tx: Transaction) => {
+      setData(prev => ({ ...prev, transactions: [tx, ...prev.transactions] }));
+      setIsTxModalOpen(false);
+  };
+
+  const handleUpdateSettings = (newSettings: any) => {
+      setData(prev => ({ ...prev, settings: newSettings }));
+  };
+  // END: Tranzaksiyalarni boshqarish funksiyalari
+
   if (isLocked) return (
     <div className="h-screen bg-background flex flex-col items-center justify-center">
       <Fingerprint size={80} className="text-neon animate-pulse mb-6" />
@@ -100,20 +114,80 @@ export default function App() {
     </div>
   );
 
+  // ... (Render qismi 2-bo'limda)
+}
+/**
+ * START: APP.TSX (2-BO'LIM)
+ * UI Render qismi: Navigatsiya paneli va Qo'shish tugmasi.
+ */
   return (
     <div className="h-screen bg-background text-white flex flex-col overflow-hidden">
       <main className="flex-1 relative overflow-hidden">
-        {activeTab === 'home' && <HomePage data={data} onNavigate={setActiveTab as any} />}
-        {activeTab === 'ai' && <AIPage data={data} onAddTransaction={(tx) => setData({...data, transactions: [tx, ...data.transactions]})} />}
-        {activeTab === 'profile' && <ProfilePage data={data} onUpdateSettings={s => setData({...data, settings: s})} />}
+        {activeTab === 'home' && (
+            <HomePage 
+                data={data} 
+                onNavigate={(page: any) => setActiveTab(page)} 
+                onTransactionClick={() => {}} 
+                onContextMenu={() => {}} 
+                onAddWallet={() => {}} 
+                onRefresh={() => {}}
+            />
+        )}
+        {activeTab === 'stats' && (
+            <StatsPage 
+                data={data} 
+                initialFilter={null} 
+                onClearFilter={() => {}} 
+                onTxClick={() => {}} 
+            />
+        )}
+        {activeTab === 'ai' && <AIPage data={data} onAddTransaction={handleAddTx} />}
+        {activeTab === 'profile' && <ProfilePage data={data} onUpdateSettings={handleUpdateSettings} />}
       </main>
 
-      <nav className="h-20 bg-panel/80 backdrop-blur-xl border-t border-white/5 flex items-center justify-around px-6">
-        <button onClick={() => setActiveTab('home')} className={`p-3 rounded-2xl ${activeTab === 'home' ? 'text-neon bg-neon/10' : 'text-gray-500'}`}><Home/></button>
-        <button onClick={() => setActiveTab('ai')} className={`p-5 rounded-full bg-neon text-black -translate-y-6 shadow-[0_0_30px_rgba(0,212,255,0.4)]`}><Sparkles/></button>
-        <button onClick={() => setActiveTab('profile')} className={`p-3 rounded-2xl ${activeTab === 'profile' ? 'text-neon bg-neon/10' : 'text-gray-500'}`}><User/></button>
+      {/* --- QO'LDA QO'SHISH TUGMASI (FAB) --- */}
+      <div className="fixed bottom-24 right-6 z-[100]">
+          <button 
+            onClick={() => setIsTxModalOpen(true)}
+            className="w-14 h-14 bg-neon text-black rounded-2xl shadow-[0_0_20px_rgba(0,212,255,0.4)] flex items-center justify-center active:scale-90 transition-all"
+          >
+            <Plus size={32} strokeWidth={3}/>
+          </button>
+      </div>
+
+      {/* --- NAVIGATSIYA PANELI (4 TA TUGMA) --- */}
+      <nav className="h-20 bg-panel/80 backdrop-blur-xl border-t border-white/5 flex items-center justify-around px-2 relative z-[90]">
+        <button onClick={() => setActiveTab('home')} className={`flex flex-col items-center gap-1 transition-all ${activeTab === 'home' ? 'text-neon' : 'text-gray-500'}`}>
+            <Home size={22}/> <span className="text-[8px] font-bold uppercase">Asosiy</span>
+        </button>
+        <button onClick={() => setActiveTab('stats')} className={`flex flex-col items-center gap-1 transition-all ${activeTab === 'stats' ? 'text-neon' : 'text-gray-500'}`}>
+            <BarChart2 size={22}/> <span className="text-[8px] font-bold uppercase">Statistika</span>
+        </button>
+        
+        {/* AI Tugmasi (Markazda ajralib turadi) */}
+        <button onClick={() => setActiveTab('ai')} className={`flex flex-col items-center gap-1 transition-all ${activeTab === 'ai' ? 'text-neon' : 'text-gray-500'}`}>
+            <div className={`p-3 rounded-xl ${activeTab === 'ai' ? 'bg-neon/10' : ''}`}><Sparkles size={22}/></div>
+            <span className="text-[8px] font-bold uppercase">AI</span>
+        </button>
+
+        <button onClick={() => setActiveTab('profile')} className={`flex flex-col items-center gap-1 transition-all ${activeTab === 'profile' ? 'text-neon' : 'text-gray-500'}`}>
+            <User size={22}/> <span className="text-[8px] font-bold uppercase">Profil</span>
+        </button>
       </nav>
+
+      {/* --- TRANZAKSIYA MODALI (QO'LDA QO'SHISH) --- */}
+      <TransactionModal 
+          isOpen={isTxModalOpen} 
+          onClose={() => setIsTxModalOpen(false)} 
+          onSave={handleAddTx}
+          categories={data.categories}
+          wallets={data.wallets}
+          allTransactions={data.transactions}
+          onAddCategory={() => {}}
+          onUpdateCategories={() => {}}
+          settings={data.settings}
+      />
     </div>
   );
 }
-/* --- END OF APP.TSX --- */
+/** END OF APP.TSX (2-BO'LIM) */
