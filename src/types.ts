@@ -1,43 +1,56 @@
 /**
- * Loyihadagi asosiy ma'lumot turlari (Interfaces).
- * Har bir yangi AI modeli va sozlamasi shu yerda belgilanadi.
+ * START: LOYIHA TURLARI (INTERFACES)
+ * Barcha ma'lumotlar strukturasi shu yerda belgilanadi.
  */
 
 export type TransactionType = 'income' | 'expense' | 'transfer';
 
-export interface ChildCategory { id: string; name: string; }
-export interface SubCategory { id: string; name: string; items?: ChildCategory[]; }
-export interface Category { id: string; name: string; icon: string; type: TransactionType; subs?: SubCategory[]; }
+export interface Category { 
+  id: string; 
+  name: string; 
+  icon: string; 
+  type: TransactionType; 
+  subs?: { id: string; name: string; items?: { id: string; name: string; }[] }[]; 
+}
 
 export interface Wallet {
-  id: string; name: string; type: 'cash' | 'card' | 'bank' | 'dollar'; balance: number; currency: 'UZS' | 'USD'; colorTheme?: string;
+  id: string; 
+  name: string; 
+  type: 'cash' | 'card' | 'bank' | 'dollar'; 
+  balance: number; 
+  currency: 'UZS' | 'USD'; 
+  colorTheme?: string;
 }
 
 export interface Transaction {
-  id: string; amount: number; type: TransactionType; walletId: string; categoryId: string; subCategoryId?: string; childCategoryId?: string; date: string; note?: string; exchangeRate?: number;
+  id: string; 
+  amount: number; 
+  type: TransactionType; 
+  walletId: string; 
+  categoryId: string; 
+  date: string; 
+  note?: string;
 }
 
 export interface AppSettings {
   userName: string;
-  // pinCode olib tashlandi
-  useBiometrics: boolean;
+  useBiometrics: boolean; // Faqat biometrika qoldi
   themeColor: string;
   enable3D: boolean;
   geminiKey?: string;
   groqKey?: string;
   preferredProvider: 'gemini' | 'groq';
-  customPrompt?: string;
   geminiModel: string; 
   groqModel: string;
-  aiModel: string; // Eski versiya bilan moslik uchun qoldirildi
+  customPrompt?: string;
 }
-
-export interface AppProfile { name: string; avatar: string; }
 
 export interface AppData {
-  profile: AppProfile; settings: AppSettings; wallets: Wallet[]; transactions: Transaction[]; categories: Category[];
+  profile: { name: string; avatar: string; };
+  settings: AppSettings;
+  wallets: Wallet[];
+  transactions: Transaction[];
+  categories: Category[];
 }
 
-export interface FilterState {
-  walletId?: string; categoryId?: string; subCategoryId?: string; childCategoryId?: string; startDate?: string; endDate?: string; type?: TransactionType | 'all';
-}
+/** END OF TYPES */
