@@ -12,15 +12,20 @@ export interface Transaction {
   id: string; amount: number; type: TransactionType; walletId: string; categoryId: string; subCategoryId?: string; childCategoryId?: string; date: string; note?: string; exchangeRate?: number;
 }
 
-// YANGILANGAN SOZLAMALAR
+// --- YANGILANGAN SOZLAMALAR ---
 export interface AppSettings {
   userName: string;
   pinCode: string | null;
   useBiometrics: boolean;
   themeColor: string;
   enable3D: boolean;
-  aiApiKey?: string;
-  aiProvider: 'gemini' | 'groq' | 'openai'; // YANGI: Provayder turi
+  
+  // YANGI: Alohida kalitlar
+  geminiKey?: string;
+  groqKey?: string;
+  
+  // Qaysi birini birinchi ishlatish kerak?
+  preferredProvider: 'gemini' | 'groq'; 
 }
 
 export interface AppProfile { name: string; avatar: string; }
