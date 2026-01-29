@@ -1,35 +1,19 @@
-/**
- * START: LOYIHA TURLARI (INTERFACES)
- * Barcha ma'lumotlar strukturasi shu yerda belgilanadi.
- */
-
+/* --- START: LOYIHA STRUKTURASI (TYPES) --- */
 export type TransactionType = 'income' | 'expense' | 'transfer';
 
 export interface Category { 
-  id: string; 
-  name: string; 
-  icon: string; 
-  type: TransactionType; 
+  id: string; name: string; icon: string; type: TransactionType; 
   subs?: { id: string; name: string; items?: { id: string; name: string; }[] }[]; 
 }
 
 export interface Wallet {
-  id: string; 
-  name: string; 
-  type: 'cash' | 'card' | 'bank' | 'dollar'; 
-  balance: number; 
-  currency: 'UZS' | 'USD'; 
-  colorTheme?: string;
+  id: string; name: string; type: 'cash' | 'card' | 'bank' | 'dollar'; 
+  balance: number; currency: 'UZS' | 'USD'; colorTheme?: string;
 }
 
 export interface Transaction {
-  id: string; 
-  amount: number; 
-  type: TransactionType; 
-  walletId: string; 
-  categoryId: string; 
-  date: string; 
-  note?: string;
+  id: string; amount: number; type: TransactionType; walletId: string; 
+  categoryId: string; date: string; note?: string;
 }
 
 export interface AppSettings {
@@ -52,5 +36,4 @@ export interface AppData {
   transactions: Transaction[];
   categories: Category[];
 }
-
-/** END OF TYPES */
+/* --- END OF TYPES --- */
