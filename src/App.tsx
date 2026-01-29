@@ -14,21 +14,22 @@ import TransactionDetailModal from './components/TransactionDetailModal';
 import StatsPage from './components/StatsPage';
 import AIPage from './components/AIPage';
 
-// --- 1. PROFIL SAHIFASI KOMPONENTI ---
+// --- PROFIL SAHIFASI ---
 const ProfilePage = ({ data, onUpdateSettings }: { data: AppData, onUpdateSettings: (s: any) => void }) => {
-    // Null check: Agar settings yo'q bo'lsa, bo'sh obyekt olamiz
     const settings = data.settings || {};
 
     const [name, setName] = useState(settings.userName || '');
     const [pin, setPin] = useState(settings.pinCode || '');
     const [biometrics, setBiometrics] = useState(settings.useBiometrics || false);
     
-    // AI State
+    // AI STATE
     const [geminiKey, setGeminiKey] = useState(settings.geminiKey || '');
     const [groqKey, setGroqKey] = useState(settings.groqKey || '');
     const [preferred, setPreferred] = useState(settings.preferredProvider || 'gemini');
+    
+    // Modellarni tanlash
     const [geminiModel, setGeminiModel] = useState(settings.geminiModel || 'gemini-2.5-flash');
-    const [groqModel, setGroqModel] = useState(settings.groqModel || 'llama-3.3-70b-versatile');
+    const [groqModel, setGroqModel] = useState(settings.groqModel || 'groq/compound');
     
     const [isSaved, setIsSaved] = useState(false);
 
@@ -57,10 +58,9 @@ const ProfilePage = ({ data, onUpdateSettings }: { data: AppData, onUpdateSettin
                  </h2>
             </div>
             
-            {/* Scrollable Content */}
             <div className="flex-1 overflow-y-auto px-6 pb-32 scrollbar-hide">
                 
-                {/* Avatar & Name */}
+                {/* 1. Avatar */}
                 <div className="flex flex-col items-center my-8">
                     <div className="relative mb-4">
                         <img src={data.profile?.avatar || 'https://cdn-icons-png.flaticon.com/512/149/149071.png'} alt="Avatar" className="w-24 h-24 rounded-full border-4 border-[#141e3c] shadow-2xl object-cover"/>
@@ -76,34 +76,38 @@ const ProfilePage = ({ data, onUpdateSettings }: { data: AppData, onUpdateSettin
                     />
                 </div>
 
-                {/* AI Settings */}
+                {/* 2. AI SOZLAMALARI */}
                 <div className="mb-8">
                     <h3 className="text-gray-500 text-[10px] font-bold uppercase mb-4 ml-1 tracking-widest text-center">Sun'iy Intellekt</h3>
                     <div className="bg-[#141e3c] p-5 rounded-3xl border border-white/5 space-y-6">
                         
-                        {/* Gemini */}
+                        {/* Gemini Section */}
                         <div className="space-y-3">
                             <div className="flex justify-between items-center">
                                 <p className="text-[#00d4ff] text-xs font-bold">Google Gemini</p>
-                                <select value={geminiModel} onChange={e => setGeminiModel(e.target.value as any)} className="bg-[#0a0e17] text-white text-[10px] p-1 rounded border border-white/10 outline-none">
-                                    <option value="gemini-3-flash">Gemini 3 Flash</option>
-                                    <option value="gemini-2.5-flash">Gemini 2.5 Flash</option>
+                                <select value={geminiModel} onChange={e => setGeminiModel(e.target.value)} className="bg-[#0a0e17] text-white text-[10px] p-1 rounded border border-white/10 outline-none max-w-[150px]">
+                                    <option value="gemini-2.5-flash">Gemini 2.5 Flash (Stable)</option>
+                                    <option value="gemini-3-flash">Gemini 3 Flash (Latest)</option>
                                     <option value="gemini-2.0-flash">Gemini 2.0 Flash</option>
+                                    <option value="gemini-2.5-flash-lite">Gemini 2.5 Flash Lite</option>
                                 </select>
                             </div>
-                            <input type="text" placeholder="Gemini API Key" value={geminiKey} onChange={e => setGeminiKey(e.target.value)} className="w-full bg-[#0a0e17] text-white p-3 rounded-xl border border-white/10 text-xs font-mono outline-none"/>
+                            <input type="text" placeholder="Gemini API Key" value={geminiKey} onChange={e => setGeminiKey(e.target.value)} className="w-full bg-[#0a0e17] text-white p-3 rounded-xl border border-white/10 text-xs font-mono outline-none focus:border-[#00d4ff]"/>
                         </div>
 
-                        {/* Groq */}
+                        {/* Groq Section */}
                         <div className="space-y-3">
                              <div className="flex justify-between items-center">
-                                <p className="text-[#f55036] text-xs font-bold">Groq (Compound)</p>
-                                <select value={groqModel} onChange={e => setGroqModel(e.target.value as any)} className="bg-[#0a0e17] text-white text-[10px] p-1 rounded border border-white/10 outline-none">
+                                <p className="text-[#f55036] text-xs font-bold">Groq Models</p>
+                                <select value={groqModel} onChange={e => setGroqModel(e.target.value)} className="bg-[#0a0e17] text-white text-[10px] p-1 rounded border border-white/10 outline-none max-w-[150px]">
+                                    <option value="groq/compound">Groq Compound (Web/Code)</option>
+                                    <option value="meta-llama/llama-4-scout-17b-16e-instruct">Llama 4 Scout 17B</option>
+                                    <option value="openai/gpt-oss-120b">GPT OSS 120B</option>
                                     <option value="llama-3.3-70b-versatile">Llama 3.3 70B</option>
-                                    <option value="llama3-8b-8192">Llama 3 8B</option>
+                                    <option value="llama3-8b-8192">Llama 3 8B (Fastest)</option>
                                 </select>
                             </div>
-                            <input type="text" placeholder="Groq API Key" value={groqKey} onChange={e => setGroqKey(e.target.value)} className="w-full bg-[#0a0e17] text-white p-3 rounded-xl border border-white/10 text-xs font-mono outline-none"/>
+                            <input type="text" placeholder="Groq API Key" value={groqKey} onChange={e => setGroqKey(e.target.value)} className="w-full bg-[#0a0e17] text-white p-3 rounded-xl border border-white/10 text-xs font-mono outline-none focus:border-[#f55036]"/>
                         </div>
 
                         {/* Provider Switch */}
@@ -117,7 +121,7 @@ const ProfilePage = ({ data, onUpdateSettings }: { data: AppData, onUpdateSettin
                     </div>
                 </div>
 
-                {/* Security */}
+                {/* 3. XAVFSIZLIK */}
                 <div className="mb-10">
                     <h3 className="text-gray-500 text-[10px] font-bold uppercase mb-4 ml-1 tracking-widest text-center">Xavfsizlik</h3>
                     <div className="bg-[#141e3c] rounded-3xl overflow-hidden border border-white/5">
@@ -140,14 +144,14 @@ const ProfilePage = ({ data, onUpdateSettings }: { data: AppData, onUpdateSettin
 
                 <button onClick={handleSave} className={`w-full py-4 rounded-2xl font-bold uppercase tracking-widest text-sm transition-all flex items-center justify-center gap-2 shadow-lg mb-12 ${isSaved ? 'bg-[#107c41] text-white' : 'bg-[#00d4ff] text-[#0a0e17]'}`}>
                     {isSaved ? <CheckCircle size={20}/> : <Save size={20}/>}
-                    {isSaved ? "Muvaffaqiyatli Saqlandi" : "Sozlamalarni Saqlash"}
+                    {isSaved ? "Saqlandi" : "Saqlash"}
                 </button>
             </div>
         </div>
     );
 };
 
-// --- 2. LOCK SCREEN KOMPONENTI ---
+// --- LOCK SCREEN ---
 const LockScreen = ({ correctPin, onUnlock }: { correctPin: string, onUnlock: () => void }) => {
     const [input, setInput] = useState('');
     const [error, setError] = useState(false);
@@ -166,8 +170,7 @@ const LockScreen = ({ correctPin, onUnlock }: { correctPin: string, onUnlock: ()
         </div>
     );
 };
-
-// --- 3. ASOSIY APP KOMPONENTI ---
+// --- ASOSIY APP KOMPONENTI ---
 type TabType = 'home' | 'stats' | 'ai' | 'profile';
 
 function App() {
@@ -202,23 +205,21 @@ function App() {
   useEffect(() => {
     CapacitorApp.addListener('backButton', () => {
       if (isLocked) return;
-      if (isTxModalOpen || isWalletModalOpen || detailTx || contextMenu) {
-         setIsTxModalOpen(false); setIsWalletModalOpen(false); setDetailTx(null); setContextMenu(null); return;
+      if (isTxModalOpen || isWalletModalOpen || detailTx) {
+         setIsTxModalOpen(false); setIsWalletModalOpen(false); setDetailTx(null); return;
       }
       if (activeTab !== 'home') { setActiveTab('home'); return; }
       CapacitorApp.exitApp();
     });
-  }, [isTxModalOpen, isWalletModalOpen, detailTx, contextMenu, activeTab, isLocked]);
+  }, [isTxModalOpen, isWalletModalOpen, detailTx, activeTab, isLocked]);
 
-  // Loading Screen (Qora ekran bo'lmasligi uchun)
+  // Loading & Lock Screen
   if (!data) return <div className="h-screen bg-[#0a0e17] flex items-center justify-center text-white font-bold">Yuklanmoqda...</div>;
-  
-  // Lock Screen
   if (isLocked && data.settings?.pinCode) return <LockScreen correctPin={data.settings.pinCode} onUnlock={() => setIsLocked(false)} />;
 
   // Handlers
   const handleWalletSave = (wallet: Wallet) => {
-    if (editingWallet) setData({ ...data, wallets: data.wallets.map(x => x.id === w.id ? wallet : x) });
+    if (editingWallet) setData({ ...data, wallets: data.wallets.map(x => x.id === wallet.id ? wallet : x) });
     else setData({ ...data, wallets: [...data.wallets, wallet] });
     setIsWalletModalOpen(false); setEditingWallet(null);
   };
