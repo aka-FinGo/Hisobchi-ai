@@ -19,7 +19,8 @@ export interface AppSettings {
   useBiometrics: boolean;
   themeColor: string;
   enable3D: boolean;
-  aiApiKey?: string; // YANGI: AI uchun API kalit
+  aiApiKey?: string;
+  aiProvider: 'gemini' | 'groq' | 'openai'; // YANGI: Provayder turi
 }
 
 export interface AppProfile { name: string; avatar: string; }
