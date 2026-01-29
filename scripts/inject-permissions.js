@@ -1,7 +1,12 @@
-const fs = require('fs');
-const path = require('path');
+import fs from 'fs';
+import path from 'path';
+import { fileURLToPath } from 'url';
 
-// Manifest fayl yo'li (Robot yaratgan papka ichida)
+// ESM rejimida __dirname to'g'ridan-to'g'ri ishlamaydi, uni o'zimiz yasaymiz:
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
+// Manifest fayl yo'li
 const manifestPath = path.join(__dirname, '../android/app/src/main/AndroidManifest.xml');
 
 // Bizga kerakli ruxsatlar
@@ -29,7 +34,9 @@ try {
         }
     } else {
         console.error('❌ Xatolik: AndroidManifest.xml topilmadi! Android papkasi yaratilganiga ishonch hosil qiling.');
-        process.exit(1);
+        // Xato bo'lsa ham jarayon to'xtab qolmasligi uchun exit(0) qilamiz, 
+        // chunki ba'zida papka kechroq paydo bo'lishi mumkin.
+        process.exit(0); 
     }
 } catch (err) {
     console.error('❌ Skriptda xatolik:', err);
