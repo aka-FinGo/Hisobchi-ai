@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { App as CapacitorApp } from '@capacitor/app';
-import { Home, BarChart2, Plus, Sparkles, User, Lock, Shield, Fingerprint, Key, Camera, Server, LogOut } from 'lucide-react';
+import { Home, BarChart2, Plus, Sparkles, User, Lock, Shield, Fingerprint, Key, Camera, Server } from 'lucide-react';
 import { loadData, saveData } from './storage';
 import { AppData, Transaction, Wallet, FilterState } from './types';
 
@@ -11,7 +11,7 @@ import TransactionDetailModal from './components/TransactionDetailModal';
 import StatsPage from './components/StatsPage';
 import AIPage from './components/AIPage';
 
-// --- PROFIL SAHIFASI KOMPONENTI ---
+// --- PROFIL SAHIFASI ---
 const ProfilePage = ({ data, onUpdateSettings }: { data: AppData, onUpdateSettings: (s: any) => void }) => {
     const [name, setName] = useState(data.settings.userName || '');
     const [pin, setPin] = useState(data.settings.pinCode || '');
@@ -67,7 +67,7 @@ const ProfilePage = ({ data, onUpdateSettings }: { data: AppData, onUpdateSettin
                             <span className="text-white text-sm font-bold">API Kalit ({provider === 'gemini' ? 'Gemini' : 'Groq'})</span>
                         </div>
                         <input 
-                            type="text" // Password emas, ko'rinib tursin nusxalaganda
+                            type="text" 
                             placeholder={provider === 'gemini' ? "AIzaSy..." : "gsk_..."}
                             value={apiKey} 
                             onChange={e => { setApiKey(e.target.value); onUpdateSettings({...data.settings, aiApiKey: e.target.value}); }} 
@@ -90,7 +90,6 @@ const ProfilePage = ({ data, onUpdateSettings }: { data: AppData, onUpdateSettin
                                 <div className="p-2 bg-white/5 rounded-lg"><Lock size={18} className="text-[#00d4ff]"/></div>
                                 <span className="text-white text-sm font-bold">PIN Kod bilan kirish</span>
                             </div>
-                            {/* Toggle Switch */}
                             <div className="relative inline-block w-10 h-6 align-middle select-none">
                                 <input type="checkbox" checked={!!pin} onChange={() => { if(pin) { setPin(''); onUpdateSettings({...data.settings, pinCode: null}); } else { setPin('0000'); onUpdateSettings({...data.settings, pinCode: '0000'}); } }} className="hidden"/>
                                 <div className={`block w-10 h-6 rounded-full cursor-pointer transition-colors ${pin ? 'bg-[#00d4ff]' : 'bg-gray-600'}`} onClick={() => { if(pin) { setPin(''); onUpdateSettings({...data.settings, pinCode: null}); } else { setPin('0000'); onUpdateSettings({...data.settings, pinCode: '0000'}); } }}></div>
@@ -130,8 +129,6 @@ const ProfilePage = ({ data, onUpdateSettings }: { data: AppData, onUpdateSettin
                 <Shield className="text-yellow-500 shrink-0" size={20}/>
                 <p className="text-yellow-500 text-xs leading-relaxed"><b>Eslatma:</b> Dasturni yangilashda eskisini o'chirib tashlashga to'g'ri kelyapti. Ma'lumotlaringizni ehtiyot qiling.</p>
             </div>
-            
-            <div className="h-10"></div>
         </div>
     )
 }
@@ -181,10 +178,8 @@ function App() {
   const [activeTab, setActiveTab] = useState<TabType>('home');
   const [historyStack, setHistoryStack] = useState<TabType[]>([]);
   
-  // Faqat pinCode null bo'lmasa qulflaymiz
   const [isLocked, setIsLocked] = useState(!!(data.settings?.pinCode && data.settings.pinCode.length === 4));
 
-  // Modallar
   const [isTxModalOpen, setIsTxModalOpen] = useState(false);
   const [isWalletModalOpen, setIsWalletModalOpen] = useState(false);
   const [editingTx, setEditingTx] = useState<Transaction | null>(null);
@@ -195,31 +190,23 @@ function App() {
 
   useEffect(() => { saveData(data); }, [data]);
 
-  // Back Button Logic
   useEffect(() => {
     CapacitorApp.addListener('backButton', () => {
-      if (isLocked) return; // Qulflangan bo'lsa hech narsa qilma
-      
-      // Modallar ochiq bo'lsa yopish
+      if (isLocked) return;
       if (isTxModalOpen || isWalletModalOpen || detailTx || contextMenu) {
          setIsTxModalOpen(false); setIsWalletModalOpen(false); setDetailTx(null); setContextMenu(null);
          return;
       }
-      // Tarix bo'yicha orqaga
       if (historyStack.length > 0) {
          const prev = historyStack[historyStack.length - 1];
          setHistoryStack(p => p.slice(0, -1)); setActiveTab(prev);
          return;
       }
-      // Uyga qaytish
       if (activeTab !== 'home') { setActiveTab('home'); return; }
-      
-      // Ilovadan chiqish
       CapacitorApp.exitApp();
     });
   }, [isTxModalOpen, isWalletModalOpen, detailTx, contextMenu, historyStack, activeTab, isLocked]);
 
-  // --- HANDLERS ---
   const refreshData = () => { setData(loadData()); };
 
   const handleWalletSave = (wallet: Wallet) => {
@@ -246,7 +233,7 @@ function App() {
   };
 
   const handleDeleteTx = (id: string) => {
-     if(!confirm("Haqiqatan ham bu amalni o'chirmoqchimisiz?")) return; // TASDIQLASH
+     if(!confirm("Haqiqatan ham bu amalni o'chirmoqchimisiz?")) return;
      const tx = data.transactions.find(t => t.id === id);
      if(!tx) return;
      const newW = data.wallets.map(w => w.id === tx.walletId ? { ...w, balance: w.balance + (tx.type === 'income' ? -tx.amount : tx.amount) } : w);
@@ -256,7 +243,7 @@ function App() {
 
   const handleDeleteWallet = (id: string) => {
       if(data.wallets.length <= 1) return;
-      if(!confirm("Hamyonni o'chirsangiz, barcha tarixiy ma'lumotlar yo'qoladi. Rozimisiz?")) return; // TASDIQLASH
+      if(!confirm("Hamyonni o'chirsangiz, barcha tarixiy ma'lumotlar yo'qoladi. Rozimisiz?")) return;
       setData({ ...data, wallets: data.wallets.filter(w => w.id !== id), transactions: data.transactions.filter(t => t.walletId !== id) });
       setContextMenu(null);
   };
@@ -265,18 +252,13 @@ function App() {
     setStatsFilter(filter); setDetailTx(null); setActiveTab('stats');
   };
 
-  // --- RENDER ---
-
-  // 1. Agar qulflangan bo'lsa
   if (isLocked && data.settings?.pinCode) {
       return <LockScreen correctPin={data.settings.pinCode} onUnlock={() => setIsLocked(false)} />;
   }
 
-  // 2. Asosiy Ilova
   return (
     <div className="flex flex-col h-screen w-full bg-[#0a0e17] font-['Plus_Jakarta_Sans'] select-none text-[#e0e0ff]" onClick={() => setContextMenu(null)}>
       
-      {/* Content Area */}
       <div className="flex-1 overflow-hidden relative">
         <div className="h-full w-full">
           {activeTab === 'home' && (
@@ -301,39 +283,28 @@ function App() {
         </div>
       </div>
 
-      {/* Navigation Bar */}
       <div className="fixed bottom-0 left-0 right-0 z-50 bg-[#0a0e17]/90 backdrop-blur-xl pb-5 pt-3 border-t border-white/5">
         <div className="flex justify-between items-center px-6">
            <button onClick={() => setActiveTab('home')} className={`flex flex-col items-center ${activeTab === 'home' ? 'text-[#00d4ff]' : 'text-gray-600'}`}>
                <Home size={24}/>
            </button>
-           
            <button onClick={() => setActiveTab('stats')} className={`flex flex-col items-center ${activeTab === 'stats' ? 'text-[#00d4ff]' : 'text-gray-600'}`}>
                <BarChart2 size={24}/>
            </button>
-           
-           {/* Add Button */}
            <div className="relative -top-7">
               <button onClick={() => { setEditingTx(null); setIsTxModalOpen(true); }} className="w-16 h-16 rounded-full bg-[#141e3c] border border-[#00d4ff]/40 text-[#00d4ff] flex items-center justify-center shadow-[0_0_25px_rgba(0,212,255,0.3)] active:scale-95 transition-transform">
                 <Plus size={32} strokeWidth={3} />
               </button>
            </div>
-           
-           {/* Profile Button */}
            <button onClick={() => setActiveTab('profile')} className={`flex flex-col items-center ${activeTab === 'profile' ? 'text-[#00d4ff]' : 'text-gray-600'}`}>
                <User size={24}/>
            </button>
-           
-           {/* AI Button */}
            <button onClick={() => setActiveTab('ai')} className={`flex flex-col items-center ${activeTab === 'ai' ? 'text-[#00d4ff]' : 'text-gray-600'}`}>
                <Sparkles size={24}/>
            </button>
         </div>
       </div>
 
-      {/* --- MODALS --- */}
-
-      {/* Context Menu */}
       {contextMenu && (
           <div className="absolute bg-[#141e3c] border border-white/10 rounded-2xl p-2 w-44 shadow-2xl z-[150] animate-slideUp" style={{ top: contextMenu.y - 100, left: Math.min(contextMenu.x - 20, window.innerWidth - 180) }} onClick={e => e.stopPropagation()}>
               <button onClick={() => { if(contextMenu.type === 'tx') { setEditingTx(contextMenu.item); setIsTxModalOpen(true); } if(contextMenu.type === 'wallet') { setEditingWallet(contextMenu.item); setIsWalletModalOpen(true); } setContextMenu(null); }} className="w-full text-left px-3 py-3 text-white text-sm font-bold hover:bg-white/5 rounded-xl">✏️ Tahrirlash</button>
@@ -342,9 +313,19 @@ function App() {
           </div>
       )}
 
-      {/* Wallet Modal */}
       <WalletModal isOpen={isWalletModalOpen} onClose={() => { setIsWalletModalOpen(false); setEditingWallet(null); }} onSave={handleWalletSave} initialData={editingWallet} />
       
-      {/* Transaction Modal (Add/Edit) */}
-      <TransactionModal 
-          isOpen={isTxModalOpe
+      <TransactionDetailModal 
+          isOpen={!!detailTx} 
+          onClose={() => setDetailTx(null)} 
+          transaction={detailTx} 
+          category={data.categories.find(c => c.id === detailTx?.categoryId)} 
+          wallet={data.wallets.find(w => w.id === detailTx?.walletId)} 
+          onEdit={(tx) => { setDetailTx(null); setEditingTx(tx); setIsTxModalOpen(true); }} 
+          onDelete={handleDeleteTx} 
+          onFilter={handleJumpToFilter} 
+      />
+    </div>
+  );
+}
+export default App;
