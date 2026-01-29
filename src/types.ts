@@ -12,7 +12,6 @@ export interface Transaction {
   id: string; amount: number; type: TransactionType; walletId: string; categoryId: string; subCategoryId?: string; childCategoryId?: string; date: string; note?: string; exchangeRate?: number;
 }
 
-// --- YANGILANGAN SOZLAMALAR ---
 export interface AppSettings {
   userName: string;
   pinCode: string | null;
@@ -26,8 +25,10 @@ export interface AppSettings {
   
   // Model tanlash
   preferredProvider: 'gemini' | 'groq';
-  geminiModel: 'gemini-2.5-flash' | 'gemini-3-flash' | 'gemini-2.0-flash'; // 2026-yil modellar
-  groqModel: 'llama-3.3-70b-versatile' | 'llama3-8b-8192';
+  
+  // Model nomlari (String qilib qo'ydim, chunki ro'yxat juda uzun va o'zgaruvchan)
+  geminiModel: string; 
+  groqModel: string;
 }
 
 export interface AppProfile { name: string; avatar: string; }
